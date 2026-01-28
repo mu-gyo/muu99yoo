@@ -1,0 +1,4830 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>띵타 연금 효율 계산기</title>
+<style>
+
+    :root{
+      --bg:#d8d1bf;
+      --panel:#efe8dc;
+      --panel2:#f5efe6;
+      --ink:#2b2b2b;
+      --muted:#6f6a60;
+      --line:#c7bda8;
+      --btn:#e9e1d3;
+      --shadow: 0 10px 22px rgba(0,0,0,.12);
+      --r:16px;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    }
+    body{margin:0;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:1180px;margin:24px auto;padding:0 16px 40px;}
+    h1{font-size:20px;margin:0 0 12px;}
+    .sub{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.45}
+    .grid{display:grid;grid-template-columns: 420px 1fr;gap:14px;}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border:1px solid var(--line);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+/* 카드 안에서 섹션(표/블록)끼리 숨 주기 */
+.card h2{
+  margin: 0 0 10px;
+}
+
+/* 두 번째 이후 h2는 위쪽 간격 크게 */
+.card h2 + table,
+.card h2 + .split,
+.card h2 + .note,
+.card h2 + div{
+  margin-top: 8px;
+}
+
+.card table + h2{
+  margin-top: 22px;   /* ✅ 표 다음 섹션 타이틀: 딱 붙는 문제 해결 핵심 */
+}
+
+/* 표 자체도 아래쪽 여백 조금 */
+.card table{
+  margin-bottom: 6px;
+}
+
+    .card h2{font-size:14px;margin:0 0 10px;color:#3a342b}
+    .row{display:flex;gap:10px;align-items:center;margin:8px 0;}
+    label{flex:1;color:var(--muted);font-size:12px}
+    input, select{
+      width:180px;max-width:60%;
+      padding:8px 10px;border-radius:12px;border:1px solid var(--line);
+      background:#fff; color:var(--ink);
+      outline:none;
+    }
+    .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    button{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,var(--btn),#fff);
+      color:var(--ink);
+      padding:10px 14px;border-radius:14px;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(0,0,0,.10);
+      font-weight:800;
+    }
+    button:hover{background:linear-gradient(180deg,#fff,var(--btn))}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px;background:#fff}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:#fff}
+    th,td{padding:8px 10px;font-size:13px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap}
+    th{background:#f7f2ea;color:#3a342b;text-align:left}
+    tr:last-child td{border-bottom:none}
+    td:first-child, th:first-child{text-align:left}
+    .muted{color:var(--muted)}
+    .zero{color:#9a9488}
+    .neg{color:#8b2f2f;font-weight:800}
+    .pos{color:#2f6f3e;font-weight:800}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width: 720px){.split{grid-template-columns:1fr}}
+    .tabs{display:flex;gap:10px;margin:14px 0 18px;justify-content:center;}
+.actualGrid{align-items:start;}
+.actualGrid .card{max-width:980px;margin:0 auto;}
+.actualGrid .card[style*='grid-column:1 / -1']{
+  max-width:1180px;
+}
+
+.row{justify-content:center;}
+
+    .tab{border:1px solid var(--line);background:var(--btn);padding:10px 12px;border-radius:999px;cursor:pointer;box-shadow:var(--shadow);font-weight:700;color:var(--muted);}
+    .tab.active{background:var(--panel2);color:var(--ink);}
+    .note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:8px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+  
+    .actualGrid{grid-template-columns:1fr;justify-items:center;gap:18px;}
+.actualGrid .card{
+  width:100%;
+  max-width:1180px; /* wrap이랑 동일 */
+}
+    .badgeRow{display:flex;justify-content:center;margin:10px 0 6px;}
+    .badge{display:flex;gap:10px;align-items:baseline;padding:10px 14px;border:1px solid var(--line);background:var(--panel2);border-radius:14px;box-shadow:var(--shadow);}
+    .badge b{font-size:18px;}
+    .checkCell{width:68px;}
+    .chk{width:18px;height:18px;accent-color: #6b5b3e;}
+    .center{text-align:center;}
+
+
+#tab2{ padding-bottom:48px; }
+
+
+/* === 아이콘 + 텍스트 정렬용 (연금품 / 어패류 공통) === */
+.item-label {
+  display: inline-flex;
+  align-items: center;   /* ← 이게 핵심 */
+  gap: 8px;
+}
+
+.item-icon {
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02); 
+  flex-shrink: 0;
+}
+
+
+/* === 합계 행 강조 === */
+.sum-row td{
+  border-top: 2px solid #d2c2a8;
+  padding: 14px 12px;     /* ← 높이 핵심 */
+  line-height: 1.6;       /* ← 텍스트 여유 */
+}
+
+.sum-row{
+  background: #fbf7f1;
+}
+
+.sum-row .sum-value{
+  font-weight: 700;
+  font-size: 15px;        /* 살짝 키워도 좋음 */
+}
+.sum-row td{
+  padding: 16px 12px;
+}
+
+.sum-row{
+  background: #faf6ef;
+}
+
+/* summary 오른쪽 배지 */
+.midBadge{
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.70);
+  opacity: .92;
+}
+.midBadge.on{
+  border-color: rgba(206, 184, 155, .90);
+  box-shadow: 0 0 0 2px rgba(206, 184, 155, .18);
+}
+
+/* summary 안의 작은 버튼 */
+.btnTiny{
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+
+/* ================================
+   TAB3: RECIPE (검색 + 티어별 정리)
+   ================================ */
+#panelRecipe .card{ position: relative; }
+.recipeHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.recipeSearchRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin: 10px 0 8px;
+}
+.recipeSearchRow input[type="text"]{
+  flex: 1 1 auto;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.9);
+}
+.recipeList{
+  margin-top: 10px;
+  display: grid;
+  gap: 14px;
+}
+.recipeGroup{
+  border-top: 1px solid rgba(0,0,0,0.06);
+  padding-top: 12px;
+}
+.recipeGroup:first-child{
+  border-top: 0;
+  padding-top: 0;
+}
+.recipeGroupTitle{
+  font-size: 13px;
+  opacity: .85;
+  margin: 0 0 8px;
+}
+.recipeCards{
+  display: grid;
+  gap: 10px;
+}
+.recipeCard{
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.65);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.recipeCardTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.recipeKind{
+  font-size: 12px;
+  opacity: .6;
+  white-space: nowrap;
+}
+.recipeIngs{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+.recipeIng{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(242,236,227,0.7);
+  border: 1px solid rgba(0,0,0,0.06);
+  font-size: 13px;
+}
+.recipeIng .qty{
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+}
+
+/* dialog */
+.recipeDialog{
+  border: 0;
+  padding: 0;
+  border-radius: 16px;
+  width: min(980px, 96vw);
+  max-height: 88vh;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.22);
+}
+.recipeDialog::backdrop{
+  background: rgba(0,0,0,0.35);
+}
+.recipeDialogInner{
+  padding: 14px 14px 16px;
+  background: #f7f1e8;
+  max-height: 88vh;
+  overflow: auto;
+}
+.recipeDialogTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.recipeDialogTitle{
+  font-size: 15px;
+  font-weight: 700;
+}
+
+#btnRecipePopup{ display:none !important; }
+
+.uiTitleHide{
+  visibility: hidden;   /* 공간 유지 */
+  height: 0;            /* 여백 최소화 */
+  margin: 0;
+  padding: 0;
+}
+
+[data-tipname] {
+  cursor: pointer;
+}
+
+/* TAB3 카드 폭을 탭1/탭2와 통일 */
+#panelRecipe .card{
+  width: 100%;
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+/* ===== Trade ===== */
+#tradeTbl input{ width:100%; }
+.tradeRow.hidden{ display:none; }
+.tradeRecoItem{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid rgba(0,0,0,.06); }
+.tradeRecoItem:first-child{ border-top:none; }
+.tradeRecoLeft{ display:flex; align-items:center; gap:8px; }
+.tradeRecoTier{ font-weight:700; }
+.tradeTip{ cursor:help; opacity:.8; }
+
+
+/* === FIX: hide trade box on recipe tab only === */
+#panelRecipe:not([style*="display: none"]) ~ #tradeBox,
+#panelRecipe:not([style*="display: none"]) #tradeBox {
+  display: none !important;
+}
+
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* Quantity styling (units dimmed) - override */
+
+
+
+/* Unit style unified (A) */
+
+
+
+/* === Unit typography (final) === */
+.qty-num {
+  font-size: 14px;
+  color: #2b2b2b;
+  font-weight: 600;
+}
+.qty-unit {
+  font-size: 13px;
+  color: #8a8275;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+/* Table normalization to prevent phantom space */
+table { table-layout: fixed; }
+thead tr { height: auto; }
+th, td { vertical-align: middle; }
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+/* === PATCH(TAB2): Need card layout === */
+#needMatCard .split{ display:block !important; }
+#needMatCard #needMatTblA{ width:100%; }
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+
+/* ===== Tier header ultra-ultra soft pastel ===== */
+.tier-sep td{
+  font-weight: 600;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 1티어 – barely-there green */
+.tier-sep.tier-1 td{
+  background: rgba(168, 220, 190, 0.12);
+}
+
+/* 2티어 – barely-there pink */
+.tier-sep.tier-2 td{
+  background: rgba(255, 195, 210, 0.12);
+}
+
+/* 0티어 – light gray (dilution) */
+.tier-sep.tier-0 td{
+  background: rgba(0,0,0,0.06);
+}
+
+/* 3티어 – barely-there yellow */
+.tier-sep.tier-3 td{
+  background: rgba(255, 235, 170, 0.14);
+}
+
+</style>
+<link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#E7DFD1;
+  --surface:#F7F2E9;
+  --surface2:#F1E8DA;
+  --line:rgba(46,42,35,.14);
+  --text:#2E2A23;
+  --muted:#6D6457;
+  --accent:#B98747;
+  --accent2:#8E6A37;
+    --focus-border: rgba(185,135,71,.70);
+  --focus-ring: rgba(185,135,71,.22);
+--shadow:0 10px 30px rgba(0,0,0,.08);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+  color:var(--text);
+  background:radial-gradient(1200px 700px at 50% -200px, rgba(255,255,255,.8), rgba(255,255,255,0)) , var(--bg);
+}
+a{color:inherit}
+h1,h2,h3{letter-spacing:-0.02em}
+.container, .wrap, #app, main{
+zoom: 1;
+  width:min(1180px, calc(100% - 48px));
+  margin:0 auto;
+}
+
+/* === Mobile optimization patch (non-functional) === */
+@media (min-width: 960px){
+  .container, .wrap, #app, main{ zoom: 1.1; }
+}
+
+header{
+  padding:26px 0 12px;
+  text-align:center;
+}
+header .subtitle{color:var(--muted)}
+.card, .panel, .box{
+  background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.55));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  backdrop-filter:saturate(140%) blur(6px);
+}
+.section{
+  padding:18px;
+}
+.grid{
+  display:grid;
+  gap:16px;
+}
+@media (min-width: 960px){
+  .grid.cols-2{grid-template-columns: 1fr 1fr;}
+  .grid.cols-3{grid-template-columns: 1.2fr .8fr 1fr;}
+}
+.btn, button{
+  appearance:none;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(245,240,232,.9));
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:650;
+  letter-spacing:-0.01em;
+  transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.btn:hover, button:hover{transform:translateY(-1px); box-shadow:0 10px 18px rgba(0,0,0,.10); border-color:rgba(185,135,71,.55)}
+.btn.primary, button.primary{
+  background:linear-gradient(180deg, rgba(185,135,71,.95), rgba(142,106,55,.95));
+  color:#fff;
+  border-color:rgba(0,0,0,.05);
+}
+
+/* ===============================
+   FIX: 최적화 계산 버튼을
+   '잔여 재고 이월' 버튼과 동일하게
+   =============================== */
+
+/* primary라도 일반 버튼과 동일하게 */
+.btn.primary,
+button.primary{
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.9),
+    rgba(245,240,232,.9)
+  ) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.08) !important;
+}
+
+/* disabled 상태여도 디자인은 동일 */
+.btn.primary:disabled,
+button.primary:disabled{
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.9),
+    rgba(245,240,232,.9)
+  ) !important;
+  color: rgba(46,42,35,.45) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.08) !important;
+  cursor: not-allowed;
+}
+/* primary 버튼도 hover 시 베이지 테두리 */
+.btn.primary:hover,
+button.primary:hover{
+  border-color: rgba(185,135,71,.55) !important;
+}
+
+/* ===============================
+   hover 시 베이지 배경 틴트
+   =============================== */
+
+/* 일반 버튼 hover */
+.btn:hover,
+button:hover{
+  background-color: rgba(185,135,71,.08); /* 연한 베이지 틴트 */
+}
+
+/* primary 버튼 hover (important로 덮기) */
+.btn.primary:hover,
+button.primary:hover{
+  background-color: rgba(185,135,71,.08) !important;
+  border-color: rgba(185,135,71,.55) !important;
+}
+
+/* ===============================
+   active(클릭) 시 더 진한 베이지
+   =============================== */
+
+/* 일반 버튼 active */
+.btn:active,
+button:active{
+  background-color: rgba(185,135,71,.14); /* hover(.08)보다 진함 */
+  box-shadow: 0 4px 10px rgba(0,0,0,.10);
+  transform: translateY(0); /* 눌리는 느낌 */
+}
+
+/* primary 버튼 active */
+.btn.primary:active,
+button.primary:active{
+  background-color: rgba(185,135,71,.14) !important;
+  border-color: rgba(185,135,71,.65) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,.10);
+}
+
+/* ===============================
+   버튼 로딩 상태 (spinner)
+   =============================== */
+
+.btn.loading,
+button.loading{
+  pointer-events: none;               /* 중복 클릭 방지 */
+  background-color: rgba(185,135,71,.14) !important; /* active 베이지 유지 */
+  border-color: rgba(185,135,71,.65) !important;
+  color: var(--text) !important;
+}
+
+/* 버튼 내부 스피너 */
+.btn .spinner,
+button .spinner{
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(46,42,35,.25);
+  border-top-color: rgba(46,42,35,.65);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 8px;
+}
+
+@keyframes spin{
+  to{ transform: rotate(360deg); }
+}
+
+.tabs{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  padding:10px 0 18px;
+}
+.tabs button{
+  min-width:180px;
+}
+input[type="number" data-setea="ea"], input[type="text"], select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.8);
+  outline:none;
+}
+input:focus, select:focus, input:focus-visible, select:focus-visible{border-color:var(--focus-border); box-shadow:0 0 0 4px var(--focus-ring)}
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.55);
+}
+th,td{
+  padding:10px 10px;
+  border-bottom:1px solid var(--line);
+  font-size:14px;
+}
+th{
+  text-align:left;
+  color:var(--muted);
+  font-weight:700;
+  background:rgba(241,232,218,.6);
+}
+tr:last-child td{border-bottom:none}
+.small{font-size:12px; color:var(--muted)}
+.footer-space{height:48px}
+.mat{display:inline-flex; align-items:center; gap:8px}
+.icon{
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02); 
+  border-radius:6px;
+  background:rgba(0,0,0,.06);
+}
+
+.checkbox{
+  display:inline-flex; align-items:center; gap:10px;
+}
+.checkbox input{
+  appearance:none;
+  width:18px;height:18px;
+  border-radius:6px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.85);
+  position:relative;
+  cursor:pointer;
+}
+.checkbox input:checked{
+  background:linear-gradient(180deg, rgba(185,135,71,.95), rgba(142,106,55,.95));
+  border-color:rgba(0,0,0,.05);
+}
+.checkbox input:checked::after{
+  content:"";
+  position:absolute;
+  left:5px; top:2px;
+  width:5px; height:9px;
+  border:2px solid #fff;
+  border-top:none;border-left:none;
+  transform:rotate(45deg);
+}
+
+
+/* ===== V11 UI patch: solid bg + no gradients + font unify + table alignment ===== */
+
+
+/* ===============================
+   FIX: 탭1 숫자 폰트(.mono) 통일
+   =============================== */
+.mono{
+  font-family: inherit !important;              /* ❌ 모노스페이스 제거 */
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  letter-spacing: 0 !important;
+}
+
+
+/* ===============================
+   숫자/금액/세트 단위 폰트 완전 통일
+   =============================== */
+
+/* input / select가 body 폰트 안 먹는 문제 해결 */
+input, select, textarea, button{
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* 모든 테이블 숫자 고정폭 */
+td, th{
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* 매출/가격/합계 */
+.pos, .neg, #revSum, #revSumA, #revBadgeA{
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/* 세트(64), 개 단위, badge 안 숫자 */
+.set-unit,
+.material-set-unit,
+.badge b,
+span[data-type="set"]{
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  letter-spacing: 0 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+
+body{ background: #f3efe6 !important; }
+.card{ background: var(--surface) !important; }
+
+/* remove gradients from buttons */
+button, .btn{ background-image: none !important; box-shadow: 0 8px 22px rgba(0,0,0,.08) !important; }
+.btn.primary{ background-image: none !important; }
+input, select, textarea{ font-family: inherit !important; }
+
+/* 체크박스도 단색 */
+.checkbox input:checked{ background-image: none !important; background: var(--accent) !important; }
+
+/* 테이블: 헤더/바디 간격/정렬 통일 */
+table{ table-layout: fixed; }
+th, td{ padding: 10px 12px !important; vertical-align: middle !important; line-height: 1.25 !important; }
+th:first-child, td:first-child{ text-align: left !important; }
+th:nth-child(n+2), td:nth-child(n+2){ text-align: right !important; }
+
+/* 숫자 표기 폰트 통일 */
+.num, .amount, .currency{ font-variant-numeric: tabular-nums; }
+
+/* 부재료 세트 단위(세트 64 등) 폰트가 튀지 않도록 */
+.set-unit, .material-set-unit, .badge, span[data-type="set"], .setHint{ font-family: inherit !important; font-size: inherit !important; font-weight: inherit !important; letter-spacing: normal !important; }
+
+/* 어패류 아이콘 기본 리셋 */
+.icon{
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02); 
+  display:inline-block;
+  background-color: transparent !important;
+}
+
+/* 아이콘(부재료/어패류 공통): URL background-image 표시용 */
+.icon{
+  height:22px;        /* ← 이 줄만 추가 */
+  width:auto;         /* ← 혹시 몰라 명시 */
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02);   
+  background: transparent !important;          /* 기존 회색 background 단축 속성 무력화 */
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+  display: inline-block !important;
+  vertical-align: middle;
+}
+
+/* 합계 행(탭1/탭2) 높이 강제 */
+table tfoot tr.sum-row td{
+  padding: 16px 12px !important;   /* ← 높이 여기서 결정 */
+  line-height: 1.7 !important;
+  border-top: 2px solid #d2c2a8 !important;
+  vertical-align: middle !important;
+}
+
+table tfoot tr.sum-row{
+  background: #fbf7f1 !important;
+}
+
+table tfoot tr.sum-row .sum-value{
+  font-weight: 700 !important;
+  font-size: 15px !important;
+}
+
+
+/* ✅ number input이 있는 '연금품 제작량 표'만 타겟 */
+#panelExpected table:has(input[type="number" data-setea="ea"]),
+#panelActual  table:has(input[type="number" data-setea="ea"]) {
+  table-layout: fixed;              /* 열 폭 안정 */
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* 행 높이/패딩을 단정하게 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) th,
+#panelExpected table:has(input[type="number" data-setea="ea"]) td,
+#panelActual  table:has(input[type="number" data-setea="ea"]) th,
+#panelActual  table:has(input[type="number" data-setea="ea"]) td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+/* 헤더는 약간 더 '바' 느낌 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) thead th,
+#panelActual  table:has(input[type="number" data-setea="ea"]) thead th {
+  font-weight: 700;
+  color: rgba(0,0,0,0.55);
+  background: #f2ece3;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+/* 바디 행 구분선 깔끔하게 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) tbody td,
+#panelActual  table:has(input[type="number" data-setea="ea"]) tbody td {
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+}
+
+/* 행 hover는 은은하게 (너무 티나면 촌스러움) */
+#panelExpected table:has(input[type="number" data-setea="ea"]) tbody tr:hover td,
+#panelActual  table:has(input[type="number" data-setea="ea"]) tbody tr:hover td {
+  background: rgba(0,0,0,0.02);
+}
+
+/* 첫 컬럼(연금품)은 왼쪽, 나머지 숫자들은 오른쪽 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:first-child,
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:first-child{
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(2),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(3),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(5),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(2),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(3),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(5){
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 제작량 컬럼(td에 number input이 있는 곳)은 중앙/오른쪽 중 선택 가능 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:has(input[type="number" data-setea="ea"]),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:has(input[type="number" data-setea="ea"]){
+  text-align: center;               /* ✔ 지금 UI엔 가운데가 더 균형 좋음 */
+  width: 140px;                     /* 제작량 열 폭 */
+}
+
+#panelExpected table:has(input[type="number" data-setea="ea"]) input[type="number" data-setea="ea"],
+#panelActual  table:has(input[type="number" data-setea="ea"]) input[type="number" data-setea="ea"]{
+  width: 86px !important;          /* 96보다 살짝 여유 주면 고급짐 */
+  height: 34px;
+  padding: 0 12px;
+
+  border-radius: 12px;             /* ✅ pill(999px)보다 단정 */
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 포커스 전(기본) 상태에서만 살짝 강조 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) input[type="number" data-setea="ea"]:not(:focus):not(:focus-visible),
+#panelActual  table:has(input[type="number" data-setea="ea"]) input[type="number" data-setea="ea"]:not(:focus):not(:focus-visible){
+  background: rgba(255,255,255,0.95);
+}
+#panelExpected table:has(input[type="number" data-setea="ea"]) tfoot td,
+#panelActual  table:has(input[type="number" data-setea="ea"]) tfoot td{
+  background: #f7f1e8;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  font-weight: 700;
+}
+/* ✅ 연금품 제작량 표: 첫 컬럼 넓게, 나머지 컬럼 폭 고정 */
+#panelExpected table:has(input[type="number" data-setea="ea"]),
+#panelActual  table:has(input[type="number" data-setea="ea"]){
+  table-layout: fixed;   /* 열폭을 우리가 컨트롤 */
+}
+
+/* 1열(연금품) 넓게 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) th:first-child,
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:first-child,
+#panelActual  table:has(input[type="number" data-setea="ea"]) th:first-child,
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:first-child{
+  width: 44%;                 /* 40~55% 사이로 조절 */
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  text-align: left;
+}
+
+/* 2~3열(기본가/최종가) 폭 고정 */
+#panelExpected table:has(input[type="number" data-setea="ea"]) th:nth-child(2),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(2),
+#panelExpected table:has(input[type="number" data-setea="ea"]) th:nth-child(3),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(3),
+#panelActual  table:has(input[type="number" data-setea="ea"]) th:nth-child(2),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(2),
+#panelActual  table:has(input[type="number" data-setea="ea"]) th:nth-child(3),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(3){
+  width: 110px;               /* 숫자 칸 폭 */
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4열(제작량) */
+#panelExpected table:has(input[type="number" data-setea="ea"]) th:nth-child(4),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(4),
+#panelActual  table:has(input[type="number" data-setea="ea"]) th:nth-child(4),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(4){
+  width: 140px;
+  text-align: center;
+}
+
+/* 5열(매출) */
+#panelExpected table:has(input[type="number" data-setea="ea"]) th:nth-child(5),
+#panelExpected table:has(input[type="number" data-setea="ea"]) td:nth-child(5),
+#panelActual  table:has(input[type="number" data-setea="ea"]) th:nth-child(5),
+#panelActual  table:has(input[type="number" data-setea="ea"]) td:nth-child(5){
+  width: 120px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ===== SOFT BEIGE FOCUS RING (FINAL) ===== */
+#panelExpected table input[type="number" data-setea="ea"]:focus,
+#panelActual  table input[type="number" data-setea="ea"]:focus,
+#panelExpected table input[type="number" data-setea="ea"]:focus-visible,
+#panelActual  table input[type="number" data-setea="ea"]:focus-visible{
+  outline: none !important;
+
+  /* 베이지 테두리 */
+border-color: var(--focus-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 0 0 4px var(--focus-ring) !important;
+
+}
+
+/* ===== SOFT BEIGE FOCUS RING (GLOBAL, FINAL) ===== */
+
+/* 왼쪽 폼 입력 + 오른쪽 테이블 숫자 입력 모두 */
+#panelExpected input:focus,
+#panelExpected select:focus,
+#panelActual  input:focus,
+#panelActual  select:focus,
+#panelExpected input:focus-visible,
+#panelExpected select:focus-visible,
+#panelActual  input:focus-visible,
+#panelActual  select:focus-visible{
+  outline: none !important;
+
+  /* 은은한 베이지 테두리 */
+  border-color: var(--focus-border) !important;
+
+  /* 안쪽 하이라이트 + 부드러운 외곽 링 */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+        0 0 0 4px var(--focus-ring) !important;
+}
+
+
+/* 1) 첫 컬럼(td) 라인박스 영향 제거 */
+#panelExpected td:first-child,
+#panelActual  td:first-child{
+  vertical-align: middle !important;
+  line-height: normal !important;
+}
+
+/* 2) 네가 준 래퍼(span.item-label)를 강제로 flex 정렬 */
+#panelExpected td:first-child .item-label,
+#panelActual  td:first-child .item-label{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px;
+  line-height: 1 !important;        /* 라인박스 흔들림 방지 */
+  vertical-align: middle !important;
+}
+
+/* 3) 아이콘 baseline 여백 제거 */
+#panelExpected td:first-child .item-label .item-icon,
+#panelActual  td:first-child .item-label .item-icon{
+  display: block !important;
+}
+
+/* 4) 텍스트가 ‘살짝 떠보이는’ 경우가 많아서 0.5px만 아래로 시각 보정 */
+#panelExpected td:first-child .item-label > span,
+#panelActual  td:first-child .item-label > span{
+  display: block;
+  transform: translateY(0px);
+}
+
+#panelExpected .item-label img{ margin-right: 2px !important; }
+#panelActual  .item-label img{ margin-right: 2px !important; }
+
+
+/* =========================================================
+   MINIMAL CHECKBOX + COMPLETE ROW DIM (FINAL)
+   ========================================================= */
+
+/* 체크박스 셀 정렬 */
+#panelExpected td:has(input[type="checkbox"]),
+#panelActual  td:has(input[type="checkbox"]){
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* 본체 */
+#panelExpected input[type="checkbox"],
+#panelActual  input[type="checkbox"]{
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+
+  border: 1px solid rgba(0,0,0,0.20);
+  background: rgba(255,255,255,0.95);
+
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* 체크됨: 배경색 + SVG 체크 아이콘 */
+#panelExpected input[type="checkbox"]:checked,
+#panelActual  input[type="checkbox"]:checked{
+  background: #b88752;
+  border-color: rgba(0,0,0,0.10);
+
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 9'>\
+<path d='M1 5 L4.2 8 L11 1.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/>\
+</svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px 8px;
+}
+
+/* 포커스(은은한 베이지 링) */
+#panelExpected input[type="checkbox"]:focus,
+#panelActual  input[type="checkbox"]:focus,
+#panelExpected input[type="checkbox"]:focus-visible,
+#panelActual  input[type="checkbox"]:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(206, 184, 155, 0.16);
+}
+
+
+/* =========================================================
+   완료 체크 시: "텍스트/아이콘만" 흐리게 (라인 유지)
+   ========================================================= */
+
+/* td 자체는 유지 (보더/라인 안 흐려짐) */
+#panelExpected tr:has(input[type="checkbox"]:checked) td,
+#panelActual  tr:has(input[type="checkbox"]:checked) td{
+  opacity: 1;
+}
+
+/* td 안의 요소들만 흐리게 (체크박스 제외) */
+#panelExpected tr:has(input[type="checkbox"]:checked) td *:not(input[type="checkbox"]),
+#panelActual  tr:has(input[type="checkbox"]:checked) td *:not(input[type="checkbox"]){
+  opacity: 0.55;
+}
+
+/* 숫자만 있는 td(텍스트 노드)도 톤다운 */
+#panelExpected tr:has(input[type="checkbox"]:checked) td:not(:has(*)),
+#panelActual  tr:has(input[type="checkbox"]:checked) td:not(:has(*)){
+  color: rgba(0,0,0,0.40);
+}
+
+/* 체크박스는 항상 선명 */
+#panelExpected tr:has(input[type="checkbox"]:checked) input[type="checkbox"],
+#panelActual  tr:has(input[type="checkbox"]:checked) input[type="checkbox"]{
+  opacity: 1;
+}
+
+#panelExpected td:has(input[type="checkbox"]),
+#panelActual  td:has(input[type="checkbox"]){
+  width: 46px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* ===== 금액 표시 공통 ===== */
+.money{
+  white-space: nowrap;
+}
+
+/* G 단위는 살짝 톤 다운 */
+.money .unit{
+  margin-left: 4px;        /* ← 공백 1칸 역할 */
+  font-size: 0.85em;
+  opacity: 0.65;
+}
+
+/* 0 G는 전체 흐림 */
+.money.zero{
+  opacity: 0.35;
+}
+
+/* ================================
+   MID INVENTORY (탭 공통 UI)
+   ================================ */
+/* ✅ details 자체는 그림자/테두리로 ‘따로 노는’ 느낌이 나지 않도록 정리 */
+:is(#midInvDetails, #midInvDetailsA){
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* ✅ summary: 클릭 가능 커서 + hover 하이라이트 */
+:is(#midInvDetails, #midInvDetailsA) > summary{
+  cursor: pointer;
+  position: relative;
+  transition: background .15s ease, border-color .15s ease;
+}
+:is(#midInvDetails, #midInvDetailsA) > summary:hover{
+  background: rgba(185,135,71,.08);
+  border-color: rgba(185,135,71,.28);
+}
+
+/* ✅ 펼치기 chevron (타이틀 옆) */
+:is(#midInvDetails, #midInvDetailsA) .midTitle{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+:is(#midInvDetails, #midInvDetailsA) .midTitle::after{
+  content: "▾";
+  opacity: .6;
+  transform: translateY(-1px);
+  transition: transform .15s ease, opacity .15s ease;
+}
+:is(#midInvDetails, #midInvDetailsA)[open] .midTitle::after{
+  transform: translateY(-1px) rotate(180deg);
+  opacity: .85;
+}
+
+/* ✅ 중간재 이름(라벨) 폰트 살짝 키우기 */
+:is(#midInvDetails, #midInvDetailsA) .midInvRow .midLabel span{
+  font-size: 14.5px;
+  font-weight: 400; /* 기본 굵기 */
+  line-height: 1.25;
+}
+
+#midInvCard, #midInvCardA{
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+/* details/summary 미니멀하게 (탭1+탭2 공통) */
+:is(#midInvDetails, #midInvDetailsA){
+  border-radius: 16px;
+}
+
+/* 중간재 라벨 글씨만 살짝 작게 + 줄간격 타이트 */
+:is(#midInvDetails, #midInvDetailsA) .midInvRow .mat{
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+
+/* 섹션 제목도 다른 카드들과 톤 맞추기 */
+:is(#midInvDetails, #midInvDetailsA) .midSecTitle{
+  font-size: 12.5px;
+  opacity: .8;
+}
+
+
+:is(#midInvDetails, #midInvDetailsA) > summary{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 12px 14px;
+  min-height: 46px; /* ✅ 추가: 헤더 높이 고정(클릭 타겟 좋아짐) */
+
+  border-radius: 14px;
+  background: #f2ece3;
+  border: 1px solid rgba(0,0,0,0.08);
+  user-select: none;
+}
+
+
+
+.midRight{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btnTiny{
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 12px;
+  opacity: .85;
+}
+.btnTiny:hover{
+  opacity: 1;
+}
+
+:is(#midInvDetails, #midInvDetailsA)[open] > summary{
+  background: rgba(242,236,227,0.85);
+  border-color: rgba(0,0,0,0.10);
+}
+
+
+
+
+
+:is(#midInvDetails, #midInvDetailsA) > summary::-webkit-details-marker{ display:none; }
+
+:is(#midInvDetails, #midInvDetailsA) .midTitle{
+  font-weight: 700;           /* 굵게 제거 */
+  color: rgba(0,0,0,0.75);    /* 살짝 진하게 */
+  letter-spacing: -0.01em;    /* 선택: 또렷함만 살짝 */
+}
+
+:is(#midInvDetails, #midInvDetailsA) .midHint{ font-size: 12px; opacity: 0.55; }
+
+/* 내용 영역 */
+:is(#midInvDetails, #midInvDetailsA) > .midInvGrid{
+  padding: 12px 10px 6px; /* 기존 16px → 12px로 살짝 줄임 */
+}
+
+/* midInvGrid는 "섹션들을 세로로 쌓는 컨테이너" */
+.midInvGrid{
+  display: block;
+  padding-top: 12px;
+}
+
+.midInvRow{
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.75);
+}
+
+.midInvRow .midLabel{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.midInvRow .midLabel img{
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02); 
+  display: block;
+}
+.midInvRow .midLabel span{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 입력칸: 기존 테이블 숫자 input 톤과 맞추기 */
+.midInvRow input[type="number" data-setea="ea"]{
+  width: 86px;
+  height: 34px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 섹션 타이틀 */
+.midSecTitle{
+  font-weight: 800;
+  opacity: .85;
+  margin: 18px 2px 10px; /* ✅ 위(섹션 간격) / 아래(타이틀-카드 간격) */
+  font-size: 13px;
+}
+
+
+/* 섹션 안에서만 2열 그리드 */
+.midSecGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 14px; /* ✅ 섹션 끝 여백(다음 섹션과 거리) */
+}
+
+
+@media (max-width: 900px){
+  .midSecGrid{ grid-template-columns: 1fr; }
+}
+
+
+#midInvCard input:focus,
+#midInvCard input:focus-visible,
+#midInvCardA input:focus,
+#midInvCardA input:focus-visible{
+  outline: none !important;
+  border-color: rgba(206, 184, 155, 0.9) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 0 0 2px rgba(206, 184, 155, 0.20) !important;
+}
+
+/* 요약 카드 숫자만 작게 */
+.card .mono{
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+
+/* ===== START / 재고 초기화 버튼 영역 ===== */
+.btnbar{
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 14px; /* ⬅ 안내문과 거리 */
+  align-items: center;
+}
+
+/* 버튼 공통 높이/톤 정리 */
+.btnbar button{
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+}
+
+/* START 버튼: 주 액션 */
+#btnOpt{
+  flex: 1;                 /* ⬅ 넓게 */
+  font-weight: 600;
+}
+
+/* 재고 초기화: 보조 액션 */
+#btnZero{
+  flex: 0 0 auto;
+  opacity: 0.85;
+}
+#btnZero:hover{
+  opacity: 1;
+}
+
+/* ===== 안내 문구 ===== */
+.note{
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0.75;
+}
+
+
+/* TAB3(레시피) 카드/리스트는 전체 폭 사용 */
+#panelRecipe .card{
+  grid-column: 1 / -1;
+  max-width: 1180px;   /* 팝업처럼 넓게 느껴지는 값 */
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 레시피 리스트 자체도 꽉 차게 */
+#panelRecipe #recipeList{
+  width: 100%;
+}
+
+#midInvCard,
+#midInvCardA,
+#midInvDetails,
+#midInvDetailsA{
+  box-shadow: none !important;
+}
+
+.number,
+td.right,
+.price {
+  font-variant-numeric: tabular-nums;
+}
+
+.tabs .tab{
+  font-weight: 600; /* 700 → 600 */
+}
+
+
+padding: 10px 14px;
+
+}
+
+/* 탭 hover */
+.tabs .tab:hover{
+  border-color: rgba(185,135,71,.25) !important;
+}
+
+/* 일반 버튼 hover */
+.btn:hover,
+button:hover{
+  background-color: rgba(185,135,71,.08);
+  border-color: rgba(185,135,71,.25);
+}
+.tabs .tab.active{
+  border-color: rgba(185,135,71,.25);
+}
+
+@media (max-width: 768px){
+  body{ padding: 8px; }
+  .tabs .tab{ padding: 12px 12px; font-size: 15px; }
+  input, select, button{ min-height: 44px; font-size: 16px; }
+  .tableWrap{ overflow-x: auto; }
+}
+
+/* 중간 연금품 재고 제목 */
+.midTitle{
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(0,0,0,.65);
+}
+.recipeTip{
+  position: fixed;
+  z-index: 9999;
+  max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid rgba(0,0,0,.10);
+  box-shadow: 0 14px 34px rgba(0,0,0,.18);
+  font-size: 13.5px;     /* ✅ 글씨 키움 */
+  line-height: 1.35;
+  color: var(--text);
+  pointer-events: none;
+}
+
+.recipeTip .t{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+.recipeTip .sub{
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.recipeTip .m{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-top: 1px dashed rgba(0,0,0,.08);
+}
+.recipeTip .m:first-of-type{ border-top: 0; }
+
+.recipeTip .m .left{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  min-width: 0;
+}
+.recipeTip .m .left .mat,
+.recipeTip .m .left .item-label{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  min-width: 0;
+}
+.recipeTip img{
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  filter:
+    blur(0.2px)                   /* 계단만 살짝 녹임 */
+    contrast(1.08)                /* 선명도 체감 업 */
+    saturate(1.02); 
+  flex: 0 0 auto;
+}
+.recipeTip .m .qty{
+  font-variant-numeric: tabular-nums;
+  opacity: .8;
+}
+
+/* =========================
+   Recipe Tooltip (ONE BLOCK) v4
+/* 툴팁 트리거는 클릭 가능한 커서 */
+.tipName,[data-tipname]{ cursor: pointer; }
+   - No strong
+   - Size-based hierarchy
+   - Solid separators
+   - Row hover highlight
+   ========================= */
+
+.recipeTip{
+  position: fixed;
+  z-index: 9999;
+
+  max-width: min(380px, calc(100vw - 24px));
+  min-width: 260px;
+
+  background: #f4efe7;
+  color: rgba(0,0,0,.84);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  box-shadow: 0 18px 46px rgba(0,0,0,.18);
+
+  padding: 12px 12px 10px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* pinned 상태 */
+.recipeTip.pinned{
+  border-color: rgba(185,135,71,.18);
+  box-shadow: 0 22px 54px rgba(0,0,0,.22);
+}
+
+/* ===== Top ===== */
+.recipeTip .tipTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.recipeTip .tipTitle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.1px;
+}
+
+/* 아이콘 */
+.recipeTip img,
+.recipeTip .icon,
+.recipeTip .item-icon{
+  height: 22px;
+  width: auto;
+  image-rendering: auto;
+  flex: 0 0 auto;
+  display:block;
+}
+
+/* ===== Badge ===== */
+.recipeTip .tipBadges{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.recipeTip .tipBadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+
+  /* ✅ 더 잘 보이게(톤/크기는 유지, 대비만 살짝 업) */
+  background: rgba(185,135,71,.075);
+  border: 1px solid rgba(185,135,71,.12);
+  color: rgba(70,48,18,.80);
+
+  /* ✅ 또렷함 + 고급스러운 느낌(과하지 않게) */
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset;
+}
+
+.recipeTip .tipBadge.strong{
+  font-weight: 500;
+  background: rgba(185,135,71,.075);
+  border-color: rgba(185,135,71,.12);
+  color: rgba(70,48,18,.80);
+}
+
+
+/* ===== List ===== */
+.recipeTip .tipList{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.recipeTip .tipRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0,0,0,.08);
+
+  transition: background-color .12s ease; /* hover 부드럽게 */
+}
+.recipeTip .tipRow:last-child{ border-bottom:none; }
+
+/* ✅ hover highlight */
+.recipeTip .tipRow:hover{
+  background: rgba(185,135,71,.06);
+  border-radius: 6px;
+}
+
+.recipeTip .tipLeft{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.recipeTip .tipLeft span{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0,0,0,.82);
+}
+
+/* 수량: 크기/대비로만 강조 */
+.recipeTip .tipQty{
+  flex:0 0 auto;
+
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0,0,0,.70);
+}
+
+/* 모바일 보정 */
+@media (max-width: 420px){
+  .recipeTip{
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    padding: 11px 11px 9px;
+  }
+}
+
+
+.uiHide{ display:none !important; }
+
+
+/* 탭2 상단: note의 기본 border-top 제거 */
+#panelActual .note.noteNoLine{
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 6px !important;
+}
+
+/* 우리가 원하는 '딱 한 줄' 구분선 */
+#panelActual .divider{
+  height: 1px;
+  background: rgba(0,0,0,0.06);
+  margin: 12px 0 12px;
+}
+
+/* 기존 action row의 위/아래 라인(2줄) 제거 */
+#panelActual .row:has(#btnSolveActual){
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  padding: 0 !important;
+  margin: 10px 0 0 !important;
+}
+
+/* (선택) 버튼 row를 actionRow로 명확히 */
+#panelActual .row.actionRow{
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+/* =========================
+   TAB2: actualActionBar (FINAL)
+   - 배지/버튼 높이/정렬 통일
+   - 버튼 디자인은 기존 .btn 시스템 유지
+   ========================= */
+
+#panelActual .actualActionBar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  margin: 14px 0 12px;
+  padding: 12px 0;
+
+  border-top: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* 배지 + 버튼 공통 치수 */
+#panelActual .actualActionBar .badge,
+#panelActual .actualActionBar .btn{
+  height: 38px;
+  border-radius: 12px;
+  display:inline-flex;
+  align-items:center;
+  box-sizing:border-box;
+  line-height: 1;
+}
+
+/* 배지(정보) */
+#panelActual .actualActionBar .badge{
+  padding: 0 16px;
+  gap: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.45);
+  cursor: default;
+  user-select: none;
+}
+
+/* 버튼(액션) */
+#panelActual .actualActionBar .btn{
+  padding: 0 16px;
+  justify-content:center;
+  font-size: 13.5px;
+}
+
+/* 계산 버튼 폭만 통일 */
+#panelActual #btnSolveActual{
+  min-width: 130px;
+  font-weight: 600;
+}
+
+/* 숫자 강조는 유지 */
+#panelActual #revBadgeA{
+  font-weight: 700;
+  color: #2f7a4f;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ===== 탭2: 예상 총 매출 (정보 라인) ===== */
+#panelActual .revLine{
+  display: flex;
+  align-items: baseline;      /* 숫자 안정 */
+  gap: 10px;
+  margin: 10px 0 14px;         /* divider 아래 여백 */
+  padding-left: 2px;          /* 카드 좌측 정렬감 */
+}
+
+#panelActual .revLine .muted{
+  opacity: .65;
+  font-size: 15.5px;
+}
+
+#panelActual #revBadgeA{
+  font-weight: 700;
+  color: #2f7a4f;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* 탭2 버튼 줄: 폭 들쑥날쑥 해결 + 정렬 안정화 */
+#panelActual .row.actionRow{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+}
+
+/* 버튼 공통 규격 */
+#panelActual .row.actionRow .btn{
+  height: 38px;
+  min-width: 140px;         /* ✅ 두 버튼 폭 통일 */
+  padding: 0 16px;
+  display: inline-flex;     /* ✅ 내부 정렬 통일 */
+  align-items: center;      /* ✅ 세로 중앙 */
+  justify-content: center;  /* ✅ 가로 중앙 */
+  line-height: 1;           /* ✅ 텍스트 뜸 방지 */
+  gap: 8px;                 /* ✅ 아이콘-텍스트 간격 */
+  white-space: nowrap;      /* 줄바꿈 방지 */
+}
+
+/* 혹시 .btn 안쪽에 span/svg가 있으면 baseline 흔들림 방지 */
+#panelActual .row.actionRow .btn *{
+  line-height: 1;
+}
+
+#panelActual #btnSolveActual{ min-width: 150px; }
+
+
+
+
+
+
+
+
+/* === Mobile optimization patch (layout only) === */
+html{ -webkit-text-size-adjust: 100%; }
+body{ overscroll-behavior-y: contain; }
+
+/* tables: allow horizontal scroll on small screens without breaking layout */
+.tableWrap{ overflow-x:auto; -webkit-overflow-scrolling: touch; }
+.tableWrap table{ min-width: 640px; }
+
+/* checkbox squish fix (tables) */
+.checkCell{ width: 68px; }
+.checkCell .chk,
+.checkCell input[type="checkbox"]{
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  flex: 0 0 18px !important;
+}
+
+/* small screens: reduce side gutters a bit */
+@media (max-width: 520px){
+  .container, .wrap, #app, main{ width: calc(100% - 24px); }
+  header{ padding: 18px 0 8px; }
+  .card, .section{ padding: 14px; }
+}
+
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+<!-- =========================
+     Mobile layout hotfix patch
+     (CSS-only, no 구조/기능 변경)
+     ========================= -->
+<style id="mobile-hotfix-patch">
+/* 모바일에서만: 입력칸/셀 찌그러짐 + 긴 이름 겹침 + 가로 스크롤 안정화 */
+@media (max-width: 768px){
+
+  /* (A) 폼 row: 라벨/셀렉트가 너무 좁아져 세로줄쓰기 되는 문제 방지 */
+  .row{ flex-wrap: wrap; align-items: stretch; }
+  .row > label{ flex: 0 0 100%; }
+  .row input, .row select{
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* (B) 카드 안 표: 가로 스크롤이 반드시 생기도록 */
+  .card{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .card table{ min-width: 560px; } /* 4열 이상 테이블에서 이름/입력칸 겹침 방지 */
+
+  /* (C) 제작품/재료 이름: 긴 텍스트 겹침 방지 (해당 표만 줄바꿈) */
+  #craftTbl td:first-child,
+  #craftTblA td:first-child,
+  #needCraftTblA td:first-child{
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+  }
+
+  /* (D) 숫자/값 컬럼은 줄바꿈 금지(정렬 유지) */
+  #craftTbl td:not(:first-child),
+  #craftTblA td:not(:first-child),
+  #invTbl td:not(:first-child),
+  #invActualTbl td:not(:first-child),
+  #needFishTblA td:not(:first-child),
+  #needMatTblA td:not(:first-child),
+  #needCraftTblA td:not(:first-child){
+    white-space: nowrap;
+  }
+
+  /* (E) 테이블 안 입력칸 폭 뒤죽박죽 방지 */
+  table input[type="number" data-setea="ea"], table input[type="text"]{
+    box-sizing: border-box;
+    min-width: 72px;
+    width: 100%;
+    max-width: 140px;
+  }
+
+  /* (F) 중간 연금품 재고: summary 내부 버튼 찌그러짐 방지 (A/B 둘 다) */
+  #midInvDetails > summary,
+  #midInvDetailsA > summary{
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #midInvDetails .midRight,
+  #midInvDetailsA .midRight{
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #midInvDetails button,
+  #midInvDetailsA button{
+    flex: 0 0 auto;
+    min-width: 84px;
+    white-space: nowrap;
+  }
+}
+
+
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- =========================
+     Mobile layout patch v3
+     (CSS-only, no 구조/기능 변경)
+     ========================= -->
+<style id="mobile-hotfix-v3">
+@media (max-width: 768px){
+
+  /* 1) 상단 탭(채집 전/후/레시피) 잘림 방지: 줄바꿈 + 과도한 최소폭 제거 */
+  .tabs{ flex-wrap: wrap; justify-content: center; }
+  .tabs button, .tabs .tab{
+    min-width: 140px !important;
+    flex: 1 1 140px;
+  }
+
+  /* 2) 결과/필요재료 표: 지나친 수축 방지(가로 스크롤로 보는 방식 유지) */
+  #craftTbl, #craftTblA, #needCraftTblA,
+  #needFishTbl, #needMatTbl{
+    min-width: 760px;
+  }
+  .tableWrap{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 3) '초기화' 버튼 폭/높이 정상화(모바일 공통 44px 강제 확대 예외) */
+  .btnTiny, #midInvReset, #midInvResetA{
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+  }
+  /* 미입력 배지와 small 버튼 폭을 비슷하게 */
+  #midInvDetails .midBadge, #midInvDetailsA .midBadge{
+    min-width: 72px;
+    text-align: center;
+  }
+  #midInvDetails #midInvReset, #midInvDetailsA #midInvResetA{
+    min-width: 72px;
+  }
+
+  /* 4) '계산' / '재고 초기화' 버튼 줄: 두 버튼 폭 균등(있을 때만) */
+  .btnbar{ flex-wrap: wrap; }
+  .btnbar button{ flex: 1 1 0; }
+}
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- MOBILE ONLY: enlarge '미입력' badge to match reset button -->
+<style>
+@media (max-width: 768px){
+  #midInvDetails .midBadge,
+  #midInvDetailsA .midBadge{
+    height: 34px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 13px;
+  }
+}
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* === Inventory UI (scoped) === */
+#invCard .subtle{font-size:12px;opacity:.7;margin-top:-6px}
+#invCard .invSection{margin-top:12px}
+#invCard .invSection h3{font-size:14px;margin:6px 0;font-weight:600;opacity:.85}
+#invCard .invList{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px 10px}
+#invCard .invRow{display:flex;justify-content:space-between;align-items:center}
+#invCard .invRow input{width:64px;text-align:right}
+
+
+/* 툴팁 hover 영역 보장 */
+.tradeTip{
+  display: inline-block;
+  padding: 2px 4px;
+  cursor: help;
+  pointer-events: auto;
+}
+
+/* 무역 카드 아래 여백 (다음 카드와 간격) */
+#tradeBox{
+  margin-bottom: 20px;
+}
+
+
+
+/* Quantity styling (units dimmed) */
+
+
+
+
+/* === COMPACT NUMBER INPUTS (SCOPED, SAFE) === */
+/* Exclude top control inputs (stamina / stages). */
+#panelExpected table input[type="number"],
+#panelActual table input[type="number"],
+#midInvDetails input[type="number"],
+#midInvDetailsA input[type="number"],
+#tradeTbl input[type="number"]{
+  width: 72px !important;
+  max-width: 72px !important;
+  min-width: 72px !important;
+  flex: 0 0 72px !important;
+}
+
+
+/* === NUMBER INPUT ALIGN RIGHT (SCOPED) === */
+#panelExpected table input[type="number"],
+#panelActual table input[type="number"],
+#midInvDetails input[type="number"],
+#midInvDetailsA input[type="number"],
+#tradeTbl input[type="number"]{
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* =================================================
+   THEME SWITCH
+   ================================================= */
+.themeSwitch{
+  width:56px;height:30px;border-radius:999px;
+  background:var(--line);padding:3px;cursor:pointer;
+  box-shadow:var(--shadow);display:flex;align-items:center;
+}
+.themeKnob{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--surface);
+  box-shadow:0 4px 10px rgba(0,0,0,.18);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  transition:transform .25s ease, background .25s ease;
+}
+.themeKnob .icon{position:absolute;font-size:14px;opacity:0;transition:opacity .15s ease;}
+.themeKnob .sun{opacity:1;}
+
+/* =================================================
+   EMOTIONAL LAVENDER BLUE THEME
+   ================================================= */
+:root[data-theme="blue"]{
+    --focus-border: rgba(143,139,255,.75) !important;
+  --focus-ring: rgba(143,139,255,.28) !important;
+--bg:#EEF0FF !important;
+  --surface:#F6F7FF !important;
+  --surface2:#FFFFFF !important;
+
+  --text-main:#2B2F55 !important;
+  --text-sub:#6E7398 !important;
+  --text-soft:#8A8FB5 !important;
+
+  --line:rgba(143,139,255,.28) !important;
+  --accent:#8F8BFF !important;
+  --shadow:0 14px 36px rgba(143,139,255,.25) !important;
+}
+
+body{ background:var(--bg) !important; }
+
+/* =================================================
+   TEXT SYSTEM
+   ================================================= */
+:root[data-theme="blue"] body,
+:root[data-theme="blue"] td,
+:root[data-theme="blue"] th,
+:root[data-theme="blue"] label{
+  color:var(--text-main) !important;
+}
+:root[data-theme="blue"] .desc,
+:root[data-theme="blue"] .hint,
+:root[data-theme="blue"] .note{
+  color:var(--text-sub) !important;
+}
+
+/* =================================================
+   CARDS / SECTIONS
+   ================================================= */
+:root[data-theme="blue"] .card,
+:root[data-theme="blue"] .section,
+:root[data-theme="blue"] .box{
+  background:var(--surface) !important;
+  border:1px solid rgba(143,139,255,.22) !important;
+  box-shadow:var(--shadow) !important;
+}
+
+/* =================================================
+   TABLE / INVENTORY
+   ================================================= */
+:root[data-theme="blue"] .tableWrap,
+:root[data-theme="blue"] .invSection,
+:root[data-theme="blue"] .invList{
+  background:var(--surface) !important;
+  border-radius:14px;
+  box-shadow:var(--shadow) !important;
+}
+
+:root[data-theme="blue"] thead th{
+  background:rgba(143,139,255,.14) !important;
+  border-bottom:1px solid rgba(143,139,255,.35) !important;
+}
+
+:root[data-theme="blue"] tbody td{
+  border-bottom:1px solid rgba(143,139,255,.18) !important;
+}
+
+:root[data-theme="blue"] tbody tr:hover td{
+  background:rgba(143,139,255,.10) !important;
+}
+
+:root[data-theme="blue"] table input{
+  background:#fff !important;
+  border:1px solid rgba(143,139,255,.45) !important;
+  color:var(--text-main) !important;
+}
+
+/* =================================================
+   SUMMARY / TOTAL / DETAILS
+   ================================================= */
+:root[data-theme="blue"] .summary,
+:root[data-theme="blue"] .summaryRow,
+:root[data-theme="blue"] .sumRow,
+:root[data-theme="blue"] .totalRow,
+:root[data-theme="blue"] details,
+:root[data-theme="blue"] details > summary{
+  background:var(--surface) !important;
+  border:1px solid rgba(143,139,255,.22) !important;
+  color:var(--text-main) !important;
+}
+
+:root[data-theme="blue"] .sum,
+:root[data-theme="blue"] .total,
+:root[data-theme="blue"] .gold,
+:root[data-theme="blue"] .price{
+  color:#3E4377 !important;
+  font-weight:600;
+}
+
+/* =================================================
+   TABS
+   ================================================= */
+:root[data-theme="blue"] .tabs button{
+  background:rgba(143,139,255,.18) !important;
+  border:1px solid rgba(143,139,255,.35) !important;
+  color:var(--text-main) !important;
+}
+:root[data-theme="blue"] .tabs button.active{
+  background:#8F8BFF !important;
+  color:#fff !important;
+  box-shadow:0 8px 22px rgba(143,139,255,.45) !important;
+}
+
+/* =================================================
+   BUTTONS
+   ================================================= */
+/* normal buttons */
+:root[data-theme="blue"] .btn:not(.calc),
+:root[data-theme="blue"] button:not(.calc){
+  background:rgba(143,139,255,.14) !important;
+  border:1px solid rgba(143,139,255,.35) !important;
+  color:var(--text-main) !important;
+}
+
+/* calculate CTA */
+:root[data-theme="blue"] .btn.calc,
+:root[data-theme="blue"] button.calc,
+:root[data-theme="blue"] .btnCalculate{
+  background:linear-gradient(180deg,#9C99FF,#7F7BFF) !important;
+  color:#fff !important;
+  border:none !important;
+  border-radius:14px;
+  padding:12px 22px;
+  font-weight:700;
+  box-shadow:0 10px 26px rgba(143,139,255,.45);
+}
+:root[data-theme="blue"] .btn.calc:hover,
+:root[data-theme="blue"] button.calc:hover,
+:root[data-theme="blue"] .btnCalculate:hover{
+  filter:brightness(1.05);
+  transform:translateY(-1px);
+}
+
+/* =================================================
+   SWITCH STATE
+   ================================================= */
+:root[data-theme="blue"] .themeSwitch{ background:var(--accent); }
+:root[data-theme="blue"] .themeKnob{ transform:translateX(26px); background:#fff; }
+:root[data-theme="blue"] .themeKnob .sun{opacity:0;}
+:root[data-theme="blue"] .themeKnob .moon{opacity:1;}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* =================================================
+   OPTION 2 PATCH: WARM GRAY INFORMATION TEXT
+   ================================================= */
+
+/* main information text (items, numbers) */
+:root[data-theme="blue"] td,
+:root[data-theme="blue"] th,
+:root[data-theme="blue"] label{
+  color:#2f2f2f !important;
+}
+
+/* item / product names */
+:root[data-theme="blue"] td:first-child,
+:root[data-theme="blue"] .itemName,
+:root[data-theme="blue"] .prodName{
+  color:#2f2f2f !important;
+}
+
+/* secondary / description text */
+:root[data-theme="blue"] .desc,
+:root[data-theme="blue"] .note,
+:root[data-theme="blue"] .hint,
+:root[data-theme="blue"] .muted{
+  color:#6f6f6f !important;
+}
+
+/* totals slightly emphasized */
+:root[data-theme="blue"] .sum,
+:root[data-theme="blue"] .total,
+:root[data-theme="blue"] tfoot td:last-child{
+  color:#3e3e3e !important;
+  font-weight:600;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* === BLUE THEME: Alchemy inventory box hover affordance (tone only) === */
+:root[data-theme="blue"] .invBox,
+:root[data-theme="blue"] .alchemyInvBox,
+:root[data-theme="blue"] .invBoxAlchemy{
+  background: #f4f6ff;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+:root[data-theme="blue"] .invBox:hover,
+:root[data-theme="blue"] .alchemyInvBox:hover,
+:root[data-theme="blue"] .invBoxAlchemy:hover{
+  background: #e9edff; /* hover tone */
+}
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- === SET/EA INPUT CSS (fish inventory) === -->
+<style id="setea-input-css">
+/* set/ea pair layout */
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.qty-pair .unit{
+  font-size: 0.85em;
+  opacity: .75;
+  margin-left:2px;
+}
+
+/* match existing numeric input tone */
+table input[type="number"][data-setea="set"],
+table input[type="number"][data-setea="ea"]{
+  width: 72px !important;
+  max-width: 120px !important;
+  padding: 0 10px !important;
+  height: 34px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* make set a bit narrower */
+table input[type="number"][data-setea="set"]{ width: 64px !important; }
+</style>
+
+
+<!-- ===== BLUE THEME – RECIPE TOOLTIP FINAL (BORDER 1.5px) ===== -->
+<style id="blue-tooltip-unify-final">
+/* lock box model to avoid size jump */
+[data-theme="blue"] .recipeTip,
+[data-theme="blue"] .recipeTip:hover,
+[data-theme="blue"] .recipeTip.pinned{
+  box-sizing: border-box;
+}
+
+/* force border on real elements (1.5px) */
+[data-theme="blue"] .recipeTip,
+[data-theme="blue"] .recipeTip .recipeDialog,
+[data-theme="blue"] .recipeTip .recipeDialogInner{
+  border:1.5px solid #3b5fd9 !important;
+}
+
+/* prevent inner double-border artifacts */
+[data-theme="blue"] .recipeTip .recipeDialog,
+[data-theme="blue"] .recipeTip .recipeDialogInner,
+[data-theme="blue"] .recipeTip .tipCard{
+  border-color:#3b5fd9 !important;
+}
+
+/* shadows without layout shift */
+[data-theme="blue"] .recipeTip{
+  background:#ffffff;
+  box-shadow:0 10px 24px rgba(59,95,217,.18);
+  transition:box-shadow .15s ease;
+}
+[data-theme="blue"] .recipeTip:hover{
+  box-shadow:0 14px 32px rgba(59,95,217,.26);
+}
+[data-theme="blue"] .recipeTip.pinned{
+  box-shadow:0 18px 40px rgba(59,95,217,.32);
+}
+
+/* badge */
+[data-theme="blue"] .recipeTip .badge,
+[data-theme="blue"] .recipeTip .pill{
+  background:rgba(59,95,217,.12);
+  color:#3b5fd9;
+  font-weight:600;
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<h1></h1>
+<div class="sub">
+<span class="pill">🐣 메이드 바이 조무교⠀</span>
+<span style="margin-left:8px;vertical-align:middle;">
+  <div class="themeSwitch" id="themeSwitch" title="테마 전환" style="display:inline-flex;">
+    <div class="themeKnob">
+      <span class="icon sun">☀️</span>
+      <span class="icon moon">💙</span>
+    </div>
+  </div>
+</span>
+
+<br/>
+</div>
+<div class="tabs">
+<button class="tab active" id="tabExpected">🔋 채집 전 (스태미나 분배)</button>
+<button class="tab" id="tabActual">⚙️ 채집 후 (제작 효율)</button>
+<button class="tab" id="tabRecipe">📘 연금 레시피</button>
+</div>
+
+<div class="card" id="tradeBox" style="margin-top:12px">
+  <h2 style="margin:0 0 8px">🚢 무역 (선택)</h2>
+  <div class="row">
+    <label>멤버십</label>
+    <select id="tradeMember">
+      <option value="basic">🍎 기본</option>
+      <option value="pro">🔷 프로</option>
+      <option value="elite">🌟 엘리트</option>
+      <option value="prestige">💜 프레스티지</option>
+    </select>
+  </div>
+
+  <div class="note" style="margin-top:8px">
+    • 슬롯 정보(요구 수량/퍼센트)를 <b>하나라도 입력</b>하면 무역 보너스를 계산합니다. (미입력 시 무역 미적용)<br/>
+    • 품목은 입력하지 않습니다. 계산 결과를 바탕으로 <b>자동 추천</b>합니다.
+  </div>
+
+  <div style="margin-top:10px">
+    <table id="tradeTbl" style="width:100%">
+      <thead>
+        <tr><th style="width:80px">슬롯</th><th>요구 수량 (1~30)</th><th>퍼센트 (101~120)</th></tr>
+      </thead>
+      <tbody>
+        <tr class="tradeRow" data-slot="1"><td class="muted">📦 1</td><td><input id="tradeReq1" type="number" data-setea="ea" min="1" max="30" step="1" placeholder="0"/></td><td><input id="tradePct1" type="number" data-setea="ea" min="101" max="120" step="1" placeholder="0"/></td></tr>
+<tr class="tradeRow" data-slot="2"><td class="muted">📦 2</td><td><input id="tradeReq2" type="number" data-setea="ea" min="1" max="30" step="1" placeholder="0"/></td><td><input id="tradePct2" type="number" data-setea="ea" min="101" max="120" step="1" placeholder="0"/></td></tr>
+<tr class="tradeRow" data-slot="3"><td class="muted">📦 3</td><td><input id="tradeReq3" type="number" data-setea="ea" min="1" max="30" step="1" placeholder="0"/></td><td><input id="tradePct3" type="number" data-setea="ea" min="101" max="120" step="1" placeholder="0"/></td></tr>
+<tr class="tradeRow" data-slot="4"><td class="muted">📦 4</td><td><input id="tradeReq4" type="number" data-setea="ea" min="1" max="30" step="1" placeholder="0"/></td><td><input id="tradePct4" type="number" data-setea="ea" min="101" max="120" step="1" placeholder="0"/></td></tr>
+<tr class="tradeRow" data-slot="5"><td class="muted">📦 5</td><td><input id="tradeReq5" type="number" data-setea="ea" min="1" max="30" step="1" placeholder="0"/></td><td><input id="tradePct5" type="number" data-setea="ea" min="101" max="120" step="1" placeholder="0"/></td></tr>
+      </tbody>
+    </table>
+    <div class="btnbar" style="margin-top:8px">
+      <button id="btnTradeClear">🗑️ 무역 입력 초기화</button>
+    </div>
+  </div>
+
+  <div style="margin-top:10px">
+    <h2 style="margin:0 0 6px">추천</h2>
+    <div id="tradeReco" class="note" style="margin:0">무역 슬롯 정보를 입력하면 여기서 추천을 표시합니다.</div>
+  </div>
+</div>
+
+<div id="panelExpected">
+<div class="grid">
+<div class="card">
+<h2>입력</h2>
+<div class="row">
+<label>총 스태미나</label>
+<input id="totalStamina" min="0" step="1" type="number" data-setea="ea" value="3000"/>
+</div>
+<div class="row uiHide">
+<label>채집 1회 스태미나</label>
+<input id="staminaPerCast" min="1" step="1" type="number" data-setea="ea" value="15"/>
+</div>
+<div class="row">
+<label>도구 강화 단계</label>
+<select id="toolLevel">
+<option value="3">3~5강 (3개 드랍)</option>
+<option value="6">6~8강 (4개 드랍)</option>
+<option value="9">9~11강 (5개 드랍)</option>
+<option selected="" value="12">12~13강 (6개 드랍)</option>
+<option value="14">14강 (7개 드랍)</option>
+<option value="15">15강 (10개 드랍)</option>
+</select>
+</div>
+<div class="row">
+<label>프리미엄 한정가 단계 (0~8)</label>
+<input id="premiumLevel" max="6" min="0" step="1" type="number" data-setea="ea" value="0"/>
+</div>
+<div class="row">
+<label>심해 채집꾼 단계 (0~5)</label>
+<input id="stormLevel" max="5" min="0" step="1" type="number" data-setea="ea" value="0"/>
+</div>
+<div class="row">
+<label>별별별 단계 (0~6)</label>
+<input id="starLevel" max="6" min="0" step="1" type="number" data-setea="ea" value="0"/>
+</div>
+<h2 class="uiTitleHide" style="margin-top:1px">2) 기본 확률</h2>
+<!-- after -->
+<div class="row uiHide">
+<label>1성 확률</label><input id="p1" max="1" min="0" step="0.01" type="number" data-setea="ea" value="0.6"/>
+</div>
+<div class="row uiHide">
+<label>2성 확률</label><input id="p2" max="1" min="0" step="0.01" type="number" data-setea="ea" value="0.3"/>
+</div>
+<div class="row uiHide">
+<label>3성 확률</label><input id="p3" max="1" min="0" step="0.01" type="number" data-setea="ea" value="0.1"/>
+</div>
+<div class="btnbar">
+<button id="btnOpt">📊 계산</button>
+<button id="btnZero">🗑️ 재고 초기화</button>
+</div>
+<div class="note">
+          • 계산을 누르면 <b>스태미나 5종 분배 (100 단위)</b> + <b>연금품 제작량 (기댓값)</b>을 한 번에 추천합니다.<br/>
+          • 보유 중인 어패류와 중간 단계 연금품 재고이 있다면 <b>계산을 누르기 전</b>에 먼저 입력해야 반영됩니다.<br/>
+          • 이후 제작량을 직접 수정하면, 필요 재료/부재료 표는 즉시 업데이트됩니다.
+        </div>
+</div>
+<div class="card">
+<h2>요약</h2>
+<div class="split">
+<div>
+<div class="row"><label>프리미엄 배율</label><div class="mono" id="outPremium">-</div></div>
+<div class="row"><label>심해 채집꾼 확률</label><div class="mono" id="outStorm">-</div></div>
+<div class="row"><label>기대 드랍/캐스트</label><div class="mono" id="outDropPerCast">-</div></div>
+<div class="row"><label>총 캐스트</label><div class="mono" id="outCasts">-</div></div>
+<div class="row"><label>총 기대 드랍</label><div class="mono" id="outTotalDrops">-</div></div>
+</div>
+<div>
+<div class="row"><label>1성 확률</label><div class="mono" id="outP1">-</div></div>
+<div class="row"><label>2성 확률</label><div class="mono" id="outP2">-</div></div>
+<div class="row"><label>3성 확률</label><div class="mono" id="outP3">-</div></div>
+<div class="row"><label>총 매출</label><div class="mono" id="outRevenue">-</div></div>
+<div class="row"><label>무역 보너스</label><div class="mono" id="outTradeBonus">0 G</div></div>
+<div class="row"><label>총 매출(무역 포함)</label><div class="mono" id="outRevenueTrade">-</div></div>
+</div>
+</div>
+<h2 style="margin-top:14px">스태미나 분배 (결과)</h2>
+<table id="allocTbl">
+<thead><tr><th>어종</th><th>100 단위</th><th>스태미나</th><th>캐스트</th></tr></thead>
+<tbody></tbody>
+</table>
+<h2>연금품 제작량 (예상)</h2>
+<table id="craftTbl">
+<thead>
+<tr><th>연금품</th><th>기본가</th><th>최종가</th><th>제작량</th><th>매출</th></tr>
+</thead>
+<tbody></tbody>
+<tfoot>
+<tr class="sum-row">
+<td class="muted" colspan="4">합계</td>
+<td class="pos sum-value" id="revSum">0 G</td>
+</tr>
+</tfoot>
+</table>
+<h2>어패류 재고 입력</h2>
+<table id="invTbl">
+<thead><tr><th>어패류</th><th>재고</th></tr></thead>
+<tbody></tbody>
+</table>
+<!-- ✅ 중간 연금품 재고(탭 공통, 접힘) -->
+<div class="card midCard" id="midInvCard" >
+<details id="midInvDetails">
+<summary>
+<span class="midTitle">연금품 재고 (선택)</span>
+<div class="midRight">
+<span class="midBadge" id="midInvBadge">미입력</span>
+<button class="btnTiny" id="midInvReset" type="button">초기화</button>
+</div>
+</summary>
+<!-- app.js가 여기 안에 row들을 만들어 넣게 할 예정 -->
+<div class="midInvGrid" id="midInvGrid"></div>
+<div class="note" style="margin-top:10px">
+      • 탭1에서는 중간재 재고를 “어패류 환산 크레딧”으로만 반영합니다. (부재료 필요량에는 영향 없음)
+    </div>
+</details>
+</div>
+</div>
+<div class="card" style="grid-column:1 / -1">
+<h2>필요 재료</h2>
+<div class="split">
+<div>
+<h2 style="margin:0 0 8px">어패류 재고 / 소모 / 부족</h2>
+<table id="needFishTbl">
+<thead><tr><th>어패류</th><th>재고</th><th>소모</th><th>부족</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<div>
+<h2 style="margin:0 0 8px">부재료 필요량</h2>
+<table id="needMatTbl">
+<thead><tr><th>부재료</th><th class="right">필요</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+<div class="note">
+          • 부재료 재고는 받지 않으므로, “부족” 대신 필요량만 표시합니다.
+        </div>
+</div>
+</div> <!-- /.grid -->
+</div> <!-- /#panelExpected -->
+<div id="panelActual" style="display:none">
+<div class="grid actualGrid">
+<div class="card" style="grid-column:1 / -1">
+<h2 style="margin-top:0px">🥽 어패류 재고 (채집 후)</h2>
+<div class="btnbar">
+<button id="btnLoadToActual">📥 재고 불러오기</button>
+<button id="btnResetActualInv">🗑️ 재고 초기화</button>
+</div>
+<div class="note" style="margin-bottom:8px">
+  • 기존 재고 + 오늘 채집 기준
+</div>
+
+<table id="invActualTbl">
+<thead><tr><th>어패류(등급)</th><th>기존 재고</th><th>오늘 채집(실측)</th><th>총 재고</th></tr></thead>
+<tbody></tbody>
+</table>
+<!-- ✅ 중간 연금품 재고(탭 공통, 접힘) -->
+<div class="card midCard" id="midInvCardA" style="grid-column:1 / -1">
+<details id="midInvDetailsA">
+<summary>
+<span class="midTitle">연금품 재고 (선택)</span>
+<div class="midRight">
+<span class="midBadge" id="midInvBadgeA">미입력</span>
+<button class="btnTiny" id="midInvResetA" type="button">초기화</button>
+</div>
+</summary>
+<div class="midInvGrid" id="midInvGridA"></div>
+<div class="note" style="margin-top:10px">
+      • 탭2에서는 중간재 재고를 중간재로만 사용하며, 어패류로 환산하지 않습니다. (표시는 “순 필요량” 기준)
+    </div>
+</details>
+</div>
+</div>
+<div class="card" style="grid-column:1 / -1">
+<h2>📐 채집 후 “실제 제작” 최적화</h2>
+<div class="note noteNoLine">
+  • 오늘 채집량 + 기존 재고로 최대 매출 제작 추천<br/>
+  • “중간 연금품 재고”는 한 번 입력하면 브라우저에 저장되어 다음에도 자동으로 불러옵니다.<br/>
+</div>
+<div class="divider"></div>
+<!-- 🔹 정보 줄: 총 매출 -->
+<div class="revLine">
+<span class="muted">🪙 예상 총 매출</span>
+<b id="revBadgeA">
+  <span id="revSumTradeA">0 G</span>
+</b>
+</div>
+<!-- 🔹 액션 줄: 버튼만 -->
+<div class="note" id="premiumNoteA"></div>
+<div class="row actionRow">
+<button class="btn primary" id="btnSolveActual">📊 계산</button>
+</div>
+
+<h2 style="margin-top:14px">추천 제작량</h2>
+<table id="craftTblA">
+<thead>
+<tr><th>연금품</th><th>최종가</th><th>제작량</th><th>매출</th><th class="center">완료</th></tr>
+</thead>
+<tbody></tbody>
+<tfoot>
+<tr class="sum-row">
+<td class="muted" colspan="3">합계</td>
+<td class="pos sum-value" id="revSumA">0 G</td>
+<td></td>
+</tr>
+<tr class="sum-row">
+<td class="muted" colspan="3">무역 보너스</td>
+<td class="pos sum-value" id="tradeBonusA">0 G</td>
+<td></td>
+</tr>
+<tr class="sum-row">
+<td class="muted" colspan="3">합계(무역 포함)</td>
+<td class="pos sum-value" id="revSumTradeA">0 G</td>
+<td></td>
+</tr>
+</tfoot>
+</table>
+</div>
+
+<div class="card" id="needMatCard" style="grid-column:1 / -1">
+<h2>필요 재료 (채집 후 기준)</h2>
+<div style="margin-top:14px">
+  <h2 style="margin:0 0 8px">하위 제작 필요량 (중간재 재고 반영)</h2>
+  <table id="needCraftTblA">
+    <thead><tr><th>중간재</th><th>추가 제작 (개수)</th><th>재고</th><th>총 필요</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="note">• “추가 제작”은 현재 중간재 재고를 뺀 실제 제작 필요량, “총 필요”는 추천 제작량을 만들기 위해 필요한 총량입니다.</div>
+</div>
+
+<div style="margin-top:14px">
+  <h2 style="margin:0 0 8px">부재료 필요량</h2>
+  <table id="needMatTblA">
+    <thead><tr><th>부재료</th><th class="right">필요</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<div class="note">• 부재료 재고는 받지 않으므로, 필요량만 표시합니다.</div>
+</div>
+</div>
+</div>
+<div id="panelRecipe" style="display:none">
+<div class="grid recipeGrid">
+<div class="card">
+<div class="recipeHead">
+<h2 style="margin:0">레시피</h2>
+<div class="recipeActions">
+<button class="btn" id="btnRecipePopup">팝업으로 보기</button>
+</div>
+</div>
+<div class="row recipeSearchRow">
+<input id="recipeSearch" placeholder="레시피 검색 (이름/재료) 예: 아쿠티스, 굴 ★, 네더랙" type="text">
+<button class="btn" id="btnRecipeClear" type="button">지우기</button>
+</input></div>
+<div class="note">• 검색은 ‘완성품 이름’ 또는 ‘재료 이름’에 모두 적용됩니다.</div>
+<div class="recipeList" id="recipeList"></div>
+</div>
+</div>
+</div>
+<dialog class="recipeDialog" id="recipeDialog">
+<div class="recipeDialogInner">
+<div class="recipeDialogTop">
+<div class="recipeDialogTitle">레시피</div>
+<div class="recipeDialogBtns">
+<button class="btn" id="btnRecipePopClose" type="button">닫기</button>
+</div>
+</div>
+<div class="row recipeSearchRow">
+<input id="recipeSearchDlg" placeholder="레시피 검색 (이름/재료)" type="text">
+<button class="btn" id="btnRecipeClearDlg" type="button">지우기</button>
+</input></div>
+<div class="recipeList" id="recipeListDlg"></div>
+</div>
+</dialog>
+<script defer="" src="./app.js"></script>
+<script>
+  // 첫 로딩에서 폰트 로드로 레이아웃이 바뀌는 문제 방지
+  (async () => {
+    try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready; // Pretendard 로드 완료 대기
+      }
+    } catch (e) {}
+
+    // 1프레임/2프레임 뒤에 강제로 리플로우 유도
+    requestAnimationFrame(() => {
+      // 레이아웃 강제 계산 트리거
+      document.body.offsetHeight;
+      requestAnimationFrame(() => {
+        // 혹시라도 스크롤/표 높이 계산 꼬임 방지
+        window.dispatchEvent(new Event("resize"));
+      });
+    });
+  })();
+</script>
+
+
+  <!-- Tooltip container (필수) -->
+  <div id="recipeTip" class="recipeTip" hidden></div>
+
+
+<!-- === BLUE THEME SUM ROW OVERRIDE (SAFE PATCH) === -->
+<style id="blue-theme-sum-row">
+/* BLUE theme only */
+[data-theme="blue"] table tfoot tr.sum-row{
+  background: #eef0ff !important;
+}
+
+[data-theme="blue"] table tfoot tr.sum-row td{
+  border-top-color: rgba(143,139,255,0.45) !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- === BLUE THEME FIX (data-theme based) === -->
+<style id="blue-color-unify-fix">
+/* Sum / trade amounts unified (blue theme only) */
+[data-theme="blue"] #outRevenueTrade,
+[data-theme="blue"] #revSumTradeA,
+[data-theme="blue"] #outTradeBonus,
+[data-theme="blue"] #tradeBonusA,
+[data-theme="blue"] .sum-row .sum-value,
+[data-theme="blue"] .tradeRecoItem .pos{
+  color:#3b5fd9;
+  font-weight:700;
+}
+
+/* Inventory text neutralize (blue theme only) */
+[data-theme="blue"] .midInvRow .midLabel,
+[data-theme="blue"] .midInvRow .midLabel span,
+[data-theme="blue"] .midInvRow .item-label,
+[data-theme="blue"] .midInvRow .item-label span{
+  color:#2b2b2b;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- === FINAL BLUE THEME MONEY COLOR UNIFY === -->
+<style id="final-blue-money">
+/* BLUE theme only */
+[data-theme="blue"] .pos,
+[data-theme="blue"] .neg,
+[data-theme="blue"] #outTradeBonus,
+[data-theme="blue"] #outRevenueTrade,
+[data-theme="blue"] #revSum,
+[data-theme="blue"] #revSumTradeA,
+[data-theme="blue"] .sum-row .sum-value,
+[data-theme="blue"] .summary .value{
+  color:#6f86ff !important;
+  font-weight:600;
+}
+
+/* inventory text neutral (blue theme) */
+[data-theme="blue"] .midInvGrid,
+[data-theme="blue"] .midInvGrid *{
+  color: var(--text) !important;
+}
+
+/* === PATCH: revBadgeA theme variable binding === */
+#panelActual #revBadgeA{
+  color: var(--accent);
+}
+
+
+/* ===============================
+   FIX: 예상 총 매출 색상 고정 (테마 기준)
+   =============================== */
+#panelActual #revBadgeA{
+  color: var(--accent) !important;
+}
+
+/* pos 클래스가 붙어도 색상 고정 */
+#panelActual #revBadgeA.pos{
+  color: var(--accent) !important;
+}
+
+
+
+/* =========================================================
+   RECIPE TAB COLOR NORMALIZE (NO EMPHASIS)
+   기준: 사용자 제공 base index.html
+   ========================================================= */
+
+/* 1️⃣ 레시피 툴팁 안 작은 버튼(뱃지) – 블루 테마 톤 */
+.recipeDialog .btnTiny,
+.recipeDialog .pill,
+.recipeDialog .midBadge{
+  background: rgba(120,130,255,.10) !important;
+  border-color: rgba(120,130,255,.35) !important;
+  color: #3f46b8 !important;
+}
+
+/* 2️⃣ 레시피 탭 과한 파란 텍스트 제거 */
+#panelRecipe,
+#panelRecipe .recipeCard,
+#panelRecipe .recipeGroupTitle,
+#panelRecipe .recipeKind,
+#panelRecipe .recipeIng{
+  color: var(--text) !important;
+}
+
+/* 수량(x2, x1 등)도 기본 톤 */
+#panelRecipe .qty,
+#panelRecipe .qty-num,
+#panelRecipe .qty-unit{
+  color: var(--muted) !important;
+}
+
+/* 3️⃣ 레시피 검색창 hover / focus 테두리 */
+.recipeSearchRow input[type="text"]:hover{
+  border-color: rgba(120,130,255,.45) !important;
+}
+.recipeSearchRow input[type="text"]:focus{
+  border-color: rgba(120,130,255,.65) !important;
+  box-shadow: 0 0 0 3px rgba(120,130,255,.18) !important;
+}
+
+/* 4️⃣ 레시피 카드 배경 톤 살짝 정리 (강조 X) */
+#panelRecipe .recipeCard{
+  background: rgba(255,255,255,.72) !important;
+  border-color: rgba(0,0,0,.08) !important;
+}
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- =================================================
+     THEME BRIDGE (append-only, safe)
+     Activates existing BLUE design when data-theme="blue"
+     ================================================= -->
+<style>
+/* ===== BLUE THEME OVERRIDES (NO LAYOUT TOUCH) ===== */
+
+/* INPUTS */
+html[data-theme="blue"] input,
+html[data-theme="blue"] select,
+html[data-theme="blue"] textarea{
+  border-color: rgba(90,110,255,.45);
+}
+
+html[data-theme="blue"] input:hover,
+html[data-theme="blue"] select:hover,
+html[data-theme="blue"] textarea:hover{
+  border-color: rgba(90,110,255,.65);
+}
+
+html[data-theme="blue"] input:focus,
+html[data-theme="blue"] select:focus,
+html[data-theme="blue"] textarea:focus{
+  border-color: rgba(90,110,255,.9);
+  box-shadow: 0 0 0 4px rgba(90,110,255,.25);
+}
+
+/* MID INVENTORY (연금품 재고) - force BLUE focus ring (match trade inputs) */
+html[data-theme="blue"] #midInvDetails input:hover,
+html[data-theme="blue"] #midInvDetailsA input:hover{
+  border-color: rgba(90,110,255,.65) !important;
+}
+html[data-theme="blue"] #midInvDetails input:focus,
+html[data-theme="blue"] #midInvDetails input:focus-visible,
+html[data-theme="blue"] #midInvDetailsA input:focus,
+html[data-theme="blue"] #midInvDetailsA input:focus-visible{
+  outline: none !important;
+  border-color: rgba(90,110,255,.9) !important;
+  box-shadow: 0 0 0 4px rgba(90,110,255,.25) !important;
+}
+
+
+/* BUTTONS */
+html[data-theme="blue"] button:hover,
+html[data-theme="blue"] .btn:hover{
+  background-color: rgba(90,110,255,.08);
+  border-color: rgba(90,110,255,.45);
+}
+
+html[data-theme="blue"] button:active,
+html[data-theme="blue"] .btn:active{
+  background-color: rgba(90,110,255,.14);
+  border-color: rgba(90,110,255,.65);
+}
+
+/* RECIPE PILLS */
+html[data-theme="blue"] .recipeIng,
+html[data-theme="blue"] .pill,
+html[data-theme="blue"] .midBadge{
+  background: rgba(90,110,255,.10);
+  border-color: rgba(90,110,255,.35);
+}
+
+/* RECIPE DIALOG */
+html[data-theme="blue"] .recipeDialogInner{
+  background: linear-gradient(
+    180deg,
+    rgba(245,247,255,.96),
+    rgba(235,240,255,.92)
+  );
+}
+
+/* TABLE ROW HOVER */
+html[data-theme="blue"] table tbody tr:hover td{
+  background: rgba(90,110,255,.04);
+}
+
+/* === MID INVENTORY focus ring (BEIGE ONLY, keep BLUE intact) === */
+:root:not([data-theme="blue"]) #midInvDetails input[type="number"]:focus,
+:root:not([data-theme="blue"]) #midInvDetails input[type="number"]:focus-visible,
+:root:not([data-theme="blue"]) #midInvDetailsA input[type="number"]:focus,
+:root:not([data-theme="blue"]) #midInvDetailsA input[type="number"]:focus-visible {
+  outline: none !important;
+  border-color: var(--focus-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 0 0 4px var(--focus-ring) !important;
+}
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* ===============================
+   PATCH (FINAL DIRECTION):
+   - Keep BLUE theme as-is
+   - Beige theme: recipe search uses beige focus vars
+   =============================== */
+
+/* Recipe search: always use theme focus variables (no hard-coded blue) */
+#panelRecipe .recipeSearchRow input[type="text"]:hover,
+#panelRecipe .recipeSearchRow input[type="text"]:focus,
+#panelRecipe .recipeSearchRow input[type="text"]:focus-visible{
+  border-color: var(--focus-border) !important;
+  box-shadow: 0 0 0 4px var(--focus-ring) !important;
+  outline: none !important;
+}
+
+/* Unit text (세트/개): darker for blue theme readability */
+.qty-unit{
+  color:#3f4652 !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* ===============================
+   BLUE THEME FIX (TARGETED)
+   - Recipe tooltip border only
+   - Do NOT touch beige theme
+   - Do NOT change recipe button colors
+   =============================== */
+
+/* Tooltip container border */
+[data-theme="blue"] .recipeTip,
+[data-theme="blue"] .recipeTip.pinned,
+[data-theme="blue"] .recipeTip:hover{
+  border-color: var(--line) !important;
+}
+
+/* Tooltip inner card border (some states use inner wrapper) */
+[data-theme="blue"] .recipeTip .card,
+[data-theme="blue"] .recipeTip .tipCard,
+[data-theme="blue"] .recipeDialog{
+  border-color: var(--line) !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* ===============================
+   TAB2 오늘 채집량 세트/개 텍스트
+   - 블루 테마 색상 통일
+   =============================== */
+
+/* 기본(베이지 포함) */
+#panelActual td span{
+  font-size:13px;
+  line-height:1.2;
+  color:var(--muted);
+}
+
+/* 블루 테마에서만 텍스트 색상 통일 */
+[data-theme="blue"] #panelActual td span{
+  color:#3f4652 !important; /* 블루 테마 보조 텍스트 톤 */
+}
+
+#panelActual td span + input,
+#panelActual td input + span{
+  margin-left:4px;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style>
+/* ===============================
+   BEIGE THEME: neutralize pos/neg coloring
+   =============================== */
+
+/* 1) Disable semantic coloring in beige theme */
+[data-theme="beige"] .pos,
+[data-theme="beige"] .neg,
+[data-theme="beige"] .zero{
+  color: inherit !important;
+}
+
+/* 2) Re-apply revenue color explicitly (brown) */
+[data-theme="beige"] .mono,
+[data-theme="beige"] [id^="rev"],
+[data-theme="beige"] [id^="outRevenue"],
+[data-theme="beige"] [id^="sum"],
+[data-theme="beige"] .money{
+  color: var(--accent) !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- === Global Loading Overlay === -->
+<div id="globalLoadingOverlay" style="
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.28);
+  z-index: 9999;
+">
+  <div style="
+    background: rgba(255,255,255,0.95);
+    padding: 26px 34px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 800;
+  ">
+    <div class="globalSpinner" style="
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(0,0,0,.18);
+      border-top-color: rgba(0,0,0,.65);
+      border-radius: 50%;
+      animation: globalSpin 0.9s linear infinite;
+    "></div>
+    <div>계산 중…</div>
+  </div>
+</div>
+<style>
+@keyframes globalSpin { to { transform: rotate(360deg); } }
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<!-- TEXT READABILITY PATCH -->
+<style id="text-scale-fix">
+  html{
+    font-size: 15px; /* +1px global bump */
+  }
+  body{
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+</style>
+
+</body>
+
+<style id="blue-theme-recipe-tooltip-final">
+/* =================================================
+   BLUE THEME: Recipe Tooltip FINAL
+   - 베이지 제거
+   - pinned/normal 그림자 복구
+   - 텍스트 파란색 과도함 제거 + 굵기 완화
+   ================================================= */
+
+/* 기본 블루 툴팁 */
+.recipeTip.themeBlue{
+  background: var(--surface) !important;
+  color: rgba(20,24,45,.88) !important;
+
+  border: 1px solid rgba(143,139,255,.28) !important;
+  box-shadow: 0 14px 36px rgba(143,139,255,.22) !important;
+}
+
+/* 고정(pinned) 상태 */
+.recipeTip.themeBlue.pinned{
+  box-shadow: 0 22px 54px rgba(143,139,255,.34) !important;
+  border-color: rgba(143,139,255,.48) !important;
+}
+
+/* 제목 */
+.recipeTip.themeBlue .tipTitle{
+  color: rgba(25,28,60,.92) !important;
+  font-weight: 600 !important; /* 700 → 600 */
+}
+
+/* 배지: 파란 pill 과장 제거 */
+.recipeTip.themeBlue .tipBadge{
+  background: rgba(143,139,255,.10) !important;
+  border: 1px solid rgba(143,139,255,.28) !important;
+  color: rgba(55,60,150,.85) !important;
+  font-weight: 500 !important;
+}
+
+/* 재료 행 */
+.recipeTip.themeBlue .tipRow{
+  border-top-color: rgba(143,139,255,.18) !important;
+}
+
+/* 수량 */
+.recipeTip.themeBlue .tipQty{
+  color: rgba(30,34,70,.82) !important;
+  font-weight: 400 !important;
+}
+
+/* 보조 텍스트 */
+.recipeTip.themeBlue .muted,
+.recipeTip.themeBlue .note,
+.recipeTip.themeBlue .hint{
+  color: rgba(60,65,120,.65) !important;
+  font-weight: 400 !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+
+<style id="blue-theme-recipe-tab3-ing-fix">
+/* =================================================
+   BLUE THEME: TAB3 연금 레시피 베이지 잔재 제거
+   - x2 / x1 (recipeIng) pill 배경/텍스트 색 수정
+   - 카드/검색창은 이미 정리된 상태 유지
+   ================================================= */
+
+/* 재료 pill 전체 */
+:root[data-theme="blue"] .recipeIng{
+  background: rgba(255,255,255,.85) !important;
+  border: 1px solid rgba(0,0,0,.10) !important;
+  color: rgba(32,36,70,.85) !important;
+}
+
+/* 수량(x2, x1) 텍스트 */
+:root[data-theme="blue"] .recipeIng .qty{
+  color: rgba(32,36,70,.75) !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+}
+
+/* 별(★) 텍스트 과도한 강조 제거 */
+:root[data-theme="blue"] .recipeIng b,
+:root[data-theme="blue"] .recipeIng strong{
+  color: rgba(32,36,70,.9) !important;
+  font-weight: 600 !important;
+}
+
+/* hover 시에도 베이지로 안 돌아가게 */
+:root[data-theme="blue"] .recipeIng:hover{
+  background: rgba(255,255,255,.95) !important;
+  border-color: rgba(120,130,255,.35) !important;
+}
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+</style>
+
+</html>
+
+<style>
+
+/* =========================================================
+   BLUE THEME ONLY: mid inventory card border fix
+   - 베이지 테마는 절대 건드리지 않음
+   - 중간재 카드(수호의 정수 등) 테두리만 블루 톤으로 통일
+   ========================================================= */
+
+:root[data-theme="blue"] .midInvRow{
+  border-color: rgba(143,139,255,.35) !important;
+}
+
+:root[data-theme="blue"] .midInvRow:hover,
+:root[data-theme="blue"] .midInvRow:focus-within{
+  border-color: rgba(143,139,255,.35) !important;
+  box-shadow: none !important;
+}
+
+/* 연금품 재고 summary 헤더도 블루 테마에서만 */
+:root[data-theme="blue"] #midInvDetails > summary,
+:root[data-theme="blue"] #midInvDetailsA > summary{
+  border-color: rgba(143,139,255,.35) !important;
+}
+
+:root[data-theme="blue"] #midInvDetails > summary:hover,
+:root[data-theme="blue"] #midInvDetailsA > summary:hover,
+:root[data-theme="blue"] #midInvDetails:focus-within > summary,
+:root[data-theme="blue"] #midInvDetailsA:focus-within > summary{
+  border-color: rgba(143,139,255,.35) !important;
+  box-shadow: none !important;
+}
+
+
+/* ===============================
+   BIG CARD: 각지게 (무역 포함)
+   =============================== */
+
+/* 메인 레이아웃 카드 */
+.card,
+.panel,
+.box,
+
+/* 무역 카드 전용 */
+.tradeCard,
+.tradeBox,
+.tradePanel,
+#tradeWrap > .card {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 내부 UI는 둥글게 유지 */
+.recipeCard,
+.recipeIng,
+.pill,
+.badge,
+.midBadge,
+.tradeBadge,
+.tradePill {
+  border-radius: 999px !important;
+}
+
+/* 테이블도 각지게 */
+table {
+  border-radius: 0 !important;
+}
+
+
+/* === PATCH: recipe panel big card stays square, inner elements rounded === */
+
+/* ensure big recipe panel card stays square */
+#panelRecipe.card,
+#panelRecipe.panel,
+#panelRecipe{
+  border-radius: 0 !important;
+}
+
+/* restore rounding ONLY for inner recipe UI */
+#panelRecipe .recipeCard,
+#panelRecipe table,
+#panelRecipe .pill,
+#panelRecipe .badge,
+#panelRecipe .recipeIng{
+  border-radius: 14px !important;
+}
+
+
+/* ===============================
+   BEIGE THEME: 매출 색상 통일
+   =============================== */
+
+/* 기준: 예상 총 매출 톤 */
+#revBadgeA,
+.money,
+.sum-row .sum-value,
+td:last-child.money,
+td.price,
+td.revenue {
+  color: var(--accent) !important;
+}
+
+/* 0 G / 0원도 같은 톤 유지 (투명도만 조절) */
+.money.zero {
+  color: var(--accent) !important;
+  opacity: 0.45;
+}
+
+
+
+.qty-pair{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-right:8px;
+}
+
+
+/* tighten only input -> unit spacing */
+
+
+
+/* spacing control: only tighten before '세트', keep space before '개' */
+input + .unit.set{ margin-left:0 !important; }
+input + .unit.ea{  margin-left:6px !important; }
+
+
+/* emphasize load button text */
+.btn-strong{ font-size:0.85rem; font-weight:500; }
+
+
+
+/* ===== FIX: blue theme checkbox contrast (lighter) ===== */
+[data-theme="blue"] .checkbox input:checked{
+  background: rgba(90,130,255,.72) !important;
+  border-color: rgba(90,130,255,.72) !important;
+}
+
+[data-theme="blue"] .checkbox input:checked::after{
+  border-color: #ffffff !important;
+}
+
+
+
+.recipeTip{
+  transition: box-shadow .15s ease, opacity .15s ease;
+}
+.recipeTip:hover,
+.recipeTip.pinned{
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+
+
+</style>
