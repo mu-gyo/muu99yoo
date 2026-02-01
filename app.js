@@ -2507,6 +2507,63 @@ if(idx >= 0) supply[idx] += Math.max(0, Math.floor(Number(qty || 0)));
  return supply.map(v=>Math.max(0, Math.floor(v)));
 }
 
+// ================================
+// REAL INVENTORY SIMULATION (CLAMP)
+// - Enforces real inventory for LP plan
+// ================================
+function simulateByInventoryFromLP(x, items){
+  const recipes = getAllRecipesForMid();
+  const inv = {};
+  // fish supply (base+harvest + fish credit)
+  try{
+    const supply = getActualSupply();
+    FISH_ROWS.forEach((name, idx)=>{ inv[name] = Math.max(0, Math.floor(Number(supply[idx]||0))); });
+  }catch(e){}
+  // mid inventory stored
+  try{
+    const mid = (typeof loadMidInv === 'function') ? (loadMidInv()||{}) : {};
+    for(const [k,v] of Object.entries(mid)){
+      inv[k] = (inv[k]||0) + Math.max(0, Math.floor(Number(v||0)));
+    }
+  }catch(e){}
+
+  const yld = (name)=> Math.max(1, (typeof recipeYield==='function') ? recipeYield(name) : 1);
+  const crafts = {};
+
+  (items||[]).forEach((name, idx)=>{
+    const want = Math.max(0, Math.floor(Number(x[idx]||0)));
+    if(!want){ crafts[name]=0; return; }
+    const r = recipes[name];
+    if(!r){ crafts[name]=0; return; }
+
+    let maxByInv = want;
+    for(const [ing, per0] of Object.entries(r)){
+      const per = Math.max(0, Math.floor(Number(per0||0)));
+      if(per<=0) continue;
+      if(!(ing in inv)) continue;
+      const have = Math.max(0, Math.floor(Number(inv[ing]||0)));
+      maxByInv = Math.min(maxByInv, Math.floor(have / per));
+      if(maxByInv<=0) break;
+    }
+
+    const doCraft = Math.max(0, Math.min(want, maxByInv));
+    crafts[name] = doCraft;
+
+    // consume
+    for(const [ing, per0] of Object.entries(r)){
+      const per = Math.max(0, Math.floor(Number(per0||0)));
+      if(per<=0) continue;
+      if(!(ing in inv)) continue;
+      inv[ing] = Math.max(0, Math.floor(Number(inv[ing]||0)) - per*doCraft);
+    }
+    // produce
+    inv[name] = (inv[name]||0) + yld(name)*doCraft;
+  });
+
+  return { crafts, inv };
+}
+
+
 function renderActualResult(y, prices, supply, usedFish){
   // craft table
   const tb = document.querySelector("#craftTblA tbody");
@@ -2614,7 +2671,18 @@ if(badge){
   renderNeedFishTableTo("#needFishTblA tbody", needFish, supply);
 
   // ✅ 중간재 필요 제작량: 티어 헤더 포함
-  const craftPlan = calcNetCraftPlanFromActual(y);
+  let craftPlan = [];
+if (window.LAST_ACTUAL && LAST_ACTUAL.sim && LAST_ACTUAL.sim.crafts) {
+  const sim = LAST_ACTUAL.sim;
+  craftPlan = MID_ITEMS.map(name=>{
+    const c = Math.max(0, Math.floor(sim.crafts[name]||0));
+    const yld = Math.max(1, recipeYield(name));
+    return { name, crafts:c, craft:c*yld, inv:(typeof getMidInvQty==='function')?getMidInvQty(name):0 };
+  }).filter(r=> r.craft>0 || r.inv>0);
+} else {
+  craftPlan = calcNetCraftPlanFromActual(y);
+}
+
   renderNeedCraftTableTieredTo("#needCraftTblA tbody", craftPlan);
 
   // ✅ 부재료: '중간재 제작 순서(craftPlan)' 기준으로 누적
@@ -2875,6 +2943,10 @@ function getRecipeForTip(name){
   return TIP_RECIPES[name] || null;
 }
 
+  // ✅ LP main recipes: include mid + finals (incl. dilution)
+  const recipes = getAllRecipesForMid();
+
+
   const items = Object.keys(recipes);
   const A = resources.map(()=> Array(items.length).fill(0));
   const b = resources.map(()=> 0);
@@ -2896,9 +2968,9 @@ function getRecipeForTip(name){
       if(rIdx >= 0) A[rIdx][colIdx] += Number(qty || 0);
     }
 
-    // 자신 생산: -1
+    // 자신 생산: -recipeYield(item)
     const selfIdx = resources.indexOf(item);
-    if(selfIdx >= 0) A[selfIdx][colIdx] += -1;
+    if(selfIdx >= 0) A[selfIdx][colIdx] += -recipeYield(item);
   });
 
   // 목적함수 c: 최종품만 가격, 중간재는 0
@@ -2958,7 +3030,23 @@ function optimizeActual(){
   };
 
 const usedFish = calcFishUsedFromLP(LAST_ACTUAL.A, LAST_ACTUAL.x);
-renderActualResult(yFinal, prices, fishSupply, usedFish);
+
+// ✅ clamp LP plan by real inventory before rendering anything
+let yReal = yFinal;
+try{
+  if(Array.isArray(intRes.x) && Array.isArray(items)){
+    const sim = simulateByInventoryFromLP(intRes.x, items);
+    // build yReal from crafts of final products (PRODUCTS)
+    yReal = PRODUCTS.map(p=>{
+      const c = Math.max(0, Math.floor(sim.crafts[p.name]||0));
+      return c * Math.max(1, recipeYield(p.name));
+    });
+    // stash for render stage too
+    LAST_ACTUAL.sim = sim;
+  }
+}catch(e){}
+renderActualResult(yReal, prices, fishSupply, usedFish);
+
 
 }
 
