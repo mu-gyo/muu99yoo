@@ -1810,6 +1810,12 @@ function stormProb(level){
   const map = {0:0.00, 1:0.05, 2:0.07, 3:0.10, 4:0.15, 5:0.20};
   return map[level] ?? 0.00;
 }
+function luckEngraveProb(level){
+  // 어패 행운 각인 (심해 채집꾼과 동일하게 '확률 p로 드랍 +1' 모델)
+  // 1렙 25% / 2렙 50% / 3렙 70% / 4렙 100%
+  const map = {0:0.00, 1:0.25, 2:0.50, 3:0.70, 4:1.00};
+  return map[level] ?? 0.00;
+}
 function star3Bonus(level){
   const map = {0:0.00, 1:0.01, 2:0.03, 3:0.05, 4:0.07, 5:0.10, 6:0.15};
   return map[level] ?? 0.00;
@@ -1956,13 +1962,15 @@ function readInputs(){
 
   const premiumLevel = clampInt(document.getElementById("premiumLevel").value, 0, 8);
   const stormLevel = clampInt(document.getElementById("stormLevel").value, 0, 5);
+  const engraveEl = document.getElementById("engraveLevel");
+  const engraveLevel = engraveEl ? clampInt(engraveEl.value, 0, 4) : 0;
   const starLevel = clampInt(document.getElementById("starLevel").value, 0, 6);
 
   const p1 = Number(document.getElementById("p1").value) || 0;
   const p2 = Number(document.getElementById("p2").value) || 0;
   const p3 = Number(document.getElementById("p3").value) || 0;
 
-  return { totalStamina, staminaPerCast, toolLevel, premiumLevel, stormLevel, starLevel, p1, p2, p3 };
+  return { totalStamina, staminaPerCast, toolLevel, premiumLevel, stormLevel, engraveLevel, starLevel, p1, p2, p3 };
 }
 
 function getDerived(){
@@ -1971,8 +1979,10 @@ function getDerived(){
 const stormP = stormProb(inp.stormLevel);
 const baseDrop = baseDropFromTool(inp.toolLevel);
 
+
+  const engraveP = luckEngraveProb(inp.engraveLevel || 0);
 // (변경) 채집 1회(캐스트)당 확률 p로 드랍이 +1개 되는 모델 => 기대값: k + 1*p
-const dropPerCast = baseDrop + stormP;
+const dropPerCast = baseDrop + stormP + engraveP;
 
 
   const baseProbs = {p1:inp.p1, p2:inp.p2, p3:inp.p3};
@@ -1981,12 +1991,14 @@ const dropPerCast = baseDrop + stormP;
   const casts = inp.totalStamina > 0 ? (inp.totalStamina / inp.staminaPerCast) : 0;
   const totalDrops = casts * dropPerCast;
 
-  return {inp, premiumMul, stormP, baseDrop, dropPerCast, probs, casts, totalDrops};
+  return {inp, premiumMul, stormP, engraveP, baseDrop, dropPerCast, probs, casts, totalDrops};
 }
 
 function renderSummary(d){
   document.getElementById("outPremium").textContent = fmtSmart(d.premiumMul, 2);
   document.getElementById("outStorm").textContent   = fmtSmart(d.stormP, 2);
+  const outEng = document.getElementById("outEngrave");
+  if(outEng) outEng.textContent = fmtSmart(d.engraveP || 0, 2);
   document.getElementById("outDropPerCast").textContent = fmtSmart(d.dropPerCast, 2);
   document.getElementById("outCasts").textContent = fmtSmart(d.casts, 2);
   document.getElementById("outTotalDrops").textContent = fmtSmart(d.totalDrops, 2);

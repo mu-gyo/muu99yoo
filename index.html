@@ -479,6 +479,10 @@ input + .unit.ea{  margin-left:6px !important; }
   background: rgba(255, 235, 170, 0.14);
 }
 
+
+
+/* === FORCE HIDE TRADE CARD === */
+#tradeBox{ display:none !important; }
 </style>
 <link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet"/>
@@ -3095,16 +3099,20 @@ table input[type="number"][data-setea="set"]{ width: 64px !important; }
 </select>
 </div>
 <div class="row">
-<label>프리미엄 한정가 단계 (0~8)</label>
-<input id="premiumLevel" max="6" min="0" step="1" type="number" data-setea="ea" value="0"/>
+<label>프리미엄 한정가 (0~8)</label>
+<input id="premiumLevel" max="6" min="0" step="1" type="number" data-setea="ea" value="8"/>
 </div>
 <div class="row">
-<label>심해 채집꾼 단계 (0~5)</label>
+<label>심해 채집꾼 (0~5)</label>
 <input id="stormLevel" max="5" min="0" step="1" type="number" data-setea="ea" value="0"/>
 </div>
 <div class="row">
-<label>별별별 단계 (0~6)</label>
+<label>별별별 (0~6)</label>
 <input id="starLevel" max="6" min="0" step="1" type="number" data-setea="ea" value="0"/>
+</div>
+<div class="row">
+<label>어패 행운 각인 (0~4)</label>
+<input id="engraveLevel" max="4" min="0" step="1" type="number" data-setea="ea" value="0"/>
 </div>
 <h2 class="uiTitleHide" style="margin-top:1px">2) 기본 확률</h2>
 <!-- after -->
@@ -3133,6 +3141,7 @@ table input[type="number"][data-setea="set"]{ width: 64px !important; }
 <div>
 <div class="row"><label>프리미엄 배율</label><div class="mono" id="outPremium">-</div></div>
 <div class="row"><label>심해 채집꾼 확률</label><div class="mono" id="outStorm">-</div></div>
+<div class="row"><label>어패 행운 각인 확률</label><div class="mono" id="outEngrave">-</div></div>
 <div class="row"><label>기대 드랍/캐스트</label><div class="mono" id="outDropPerCast">-</div></div>
 <div class="row"><label>총 캐스트</label><div class="mono" id="outCasts">-</div></div>
 <div class="row"><label>총 기대 드랍</label><div class="mono" id="outTotalDrops">-</div></div>
@@ -3142,8 +3151,6 @@ table input[type="number"][data-setea="set"]{ width: 64px !important; }
 <div class="row"><label>2성 확률</label><div class="mono" id="outP2">-</div></div>
 <div class="row"><label>3성 확률</label><div class="mono" id="outP3">-</div></div>
 <div class="row"><label>총 매출</label><div class="mono" id="outRevenue">-</div></div>
-<div class="row"><label>무역 보너스</label><div class="mono" id="outTradeBonus">0 G</div></div>
-<div class="row"><label>총 매출(무역 포함)</label><div class="mono" id="outRevenueTrade">-</div></div>
 </div>
 </div>
 <h2 style="margin-top:14px">스태미나 분배 (결과)</h2>
@@ -3274,16 +3281,6 @@ table input[type="number"][data-setea="set"]{ width: 64px !important; }
 <tr class="sum-row">
 <td class="muted" colspan="3">합계</td>
 <td class="pos sum-value" id="revSumA">0 G</td>
-<td></td>
-</tr>
-<tr class="sum-row">
-<td class="muted" colspan="3">무역 보너스</td>
-<td class="pos sum-value" id="tradeBonusA">0 G</td>
-<td></td>
-</tr>
-<tr class="sum-row">
-<td class="muted" colspan="3">합계(무역 포함)</td>
-<td class="pos sum-value" id="revSumTradeA">0 G</td>
 <td></td>
 </tr>
 </tfoot>
@@ -3465,7 +3462,7 @@ input + .unit.ea{  margin-left:6px !important; }
 <!-- === BLUE THEME FIX (data-theme based) === -->
 <style id="blue-color-unify-fix">
 /* Sum / trade amounts unified (blue theme only) */
-[data-theme="blue"] #outRevenueTrade,
+[data-theme="blue"] #outRevenue,
 [data-theme="blue"] #revSumTradeA,
 [data-theme="blue"] #outTradeBonus,
 [data-theme="blue"] #tradeBonusA,
@@ -3568,7 +3565,7 @@ input + .unit.ea{  margin-left:6px !important; }
 [data-theme="blue"] .pos,
 [data-theme="blue"] .neg,
 [data-theme="blue"] #outTradeBonus,
-[data-theme="blue"] #outRevenueTrade,
+[data-theme="blue"] #outRevenue,
 [data-theme="blue"] #revSum,
 [data-theme="blue"] #revSumTradeA,
 [data-theme="blue"] .sum-row .sum-value,
