@@ -1,3 +1,4 @@
+// BUILD: renamed_fish + tab1_include_dilution + tab1_no_equalize + dilution_recipe_expand + tab2_no_equalize
 
 // =============================
 // 부재료 그룹 매핑 (렌더 전용)
@@ -1405,16 +1406,49 @@ function buildFishMatrix() {
 
 
   // ================================
-  // 추출된 희석액 (0티어) 어패류 전개
-  // - 침식 방어의 핵 ★ x3  -> (★ tier) 영생의 아쿠티스 ★ (products[0])
-  // - 방어 오염의 결정 ★★ x2 -> (★★ tier) 해구 파동의 코어 ★★ (products[3])
-  // - 타락 침식의 영약 ★★★ x1 -> (★★★ tier) 아쿠아 펄스 파편 ★★★ (products[6])
   // ================================
-  const dilution = { ...col() };
+// 추출된 희석액 (0티어) 어패류 전개 (정석)
+// - getAllRecipesForMid()에 정의된 레시피를 그대로 재귀 전개하여,
+//   '어패류(굴/소라/문어/미역/성게 ★/★★/★★★)'만 합산한다.
+// - (기존처럼 특정 최종품을 프록시로 곱해서 땜빵하지 않음)
+// ================================
+  const ALL_RECIPES = getAllRecipesForMid();
 
-  for (const k in req[products[0]]) dilution[k] += req[products[0]][k] * 3;
-  for (const k in req[products[3]]) dilution[k] += req[products[3]][k] * 2;
-  for (const k in req[products[6]]) dilution[k] += req[products[6]][k] * 1;
+  // 레시피에는 "굴 ★"처럼 공백이 들어올 수 있으니 fishRows 키(예: "굴★")로 정규화
+  const normFishKey = (name)=>{
+    return String(name||"")
+      .replace(/\s*(★+)/g, "$1")   // "굴 ★" -> "굴★"
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
+  // itemName을 qty개 만들 때 필요한 '어패류'만 out(=col())에 누적
+  const expandToFishCol = (itemName, qty, out, depth=0)=>{
+    qty = Math.max(0, Math.floor(Number(qty||0)));
+    if(qty <= 0) return;
+    if(depth > 60) return;
+
+    const recipe = ALL_RECIPES[itemName];
+    if(!recipe){
+      // leaf
+      if(isFishItem(itemName)){
+        const k = normFishKey(itemName);
+        if(out[k] !== undefined) out[k] += qty;
+      }
+      return;
+    }
+
+    // 배치 생산(2개 생산 등) 반영
+    const crafts = qtyToCrafts(itemName, qty);
+
+    for(const [child, cqty] of Object.entries(recipe)){
+      expandToFishCol(child, crafts * Number(cqty||0), out, depth+1);
+    }
+  };
+
+  const dilution = { ...col() };
+  // 희석액 1개 기준 어패류 요구량을 레시피로부터 전개
+  expandToFishCol("추출된 희석액", 1, dilution, 0);
 
   req["추출된 희석액"] = dilution;
 
@@ -2236,11 +2270,15 @@ function optimize(){
 
   // prices with premium
   let prices = PRODUCTS.map(p => p.base * d.premiumMul);
-  prices = equalizePricesWithinTierMax(prices);
+  // prices = equalizePricesWithinTierMax(prices);  // (TAB1: 개별 단가 유지)
 
-  // TAB1 uses only the original 9 final products (exclude dilution from LP)
-  const N_TAB1 = 9;
-  prices = prices.slice(0, N_TAB1);
+
+  // ✅ TAB1도 '추출된 희석액' 포함해서 최적화
+const N_TAB1 = PRODUCTS.length;
+prices = prices.slice(0, N_TAB1);
+
+// ✅ A 매트릭스 확정 (어패류 제약: 15 x N)
+const A = buildFishMatrix();
 // enumerate all compositions of blocksTotal into 5 parts
   let best = {rev:-1, blocks:[0,0,0,0,0], y:Array(PRODUCTS.length).fill(0), supply:null};
 
@@ -2279,7 +2317,7 @@ function optimize(){
 
   // set craft quantities (editable)
   PRODUCTS.forEach((p, idx)=>{
-    document.getElementById(`qty_${idx}`).value = Math.max(0, Math.floor((idx < 9 ? (best.y[idx]||0) : 0)));
+    document.getElementById(`qty_${idx}`).value = Math.max(0, Math.floor(best.y[idx] || 0));
   });
 
   // update derived tables
@@ -3014,7 +3052,8 @@ function optimizeActual(){
   const premiumLevel = Number(document.getElementById("premiumLevel").value || 0);
   const premiumMul = premiumMulFromLevel(premiumLevel);
   let prices = PRODUCTS.map(p=> Math.round(p.base * premiumMul));
-  prices = equalizePricesWithinTierMax(prices);
+  // prices = equalizePricesWithinTierMax(prices);  // (TAB2: 개별 단가 유지)
+
 
   // ✅ 탭2는 "재고 밸런스 LP"로 풂 (중간재를 중간재로 사용)
   const {A, b, c, items, fishSupply} = buildActualBalanceLP(prices);
